@@ -14,10 +14,17 @@ sections=[
 ('短时爆发 vs 可靠输出','一辆车能猛冲，不代表能连续爬坡。机器人同样如此：峰值速度是演示能力，持续、可重复、可预测的输出才是工程能力。','实验室内的“荣耀闪电”人形机器人正在斜坡上进行耐久测试，动作稳定可重复，背景为工业测试设备。'),
 ('系统工程结论','所以，冲刺速度是电机、控制和机械的共同成绩；持续可靠的速度，则是电池、功率链、热管理、结构和安全策略共同拿到的成绩。','不再是“荣耀闪电”这一款机器人，而是抽象为一个广义上的人形机器人，从背后往前看的视角，远处延伸的是更长的跑道，具有高级工程纪录片质感。'),
 ]
-key=os.environ.get('SILICONFLOW_API_KEY'); generate_images=os.environ.get('GENERATE_IMAGES') == '1'; reuse_audio=os.environ.get('REUSE_AUDIO') == '1'; use_existing_images=os.environ.get('USE_EXISTING_IMAGES') == '1'; image_scenes={int(x) for x in os.environ.get('IMAGE_SCENES','').split(',') if x.strip()}; srt=[]; concat=[]; t=0.0
+key=os.environ.get('SILICONFLOW_API_KEY'); image_provider=os.environ.get('IMAGE_PROVIDER','gpt'); generate_images=os.environ.get('GENERATE_IMAGES') == '1'; reuse_audio=os.environ.get('REUSE_AUDIO') == '1'; use_existing_images=os.environ.get('USE_EXISTING_IMAGES') == '1'; image_scenes={int(x) for x in os.environ.get('IMAGE_SCENES','').split(',') if x.strip()}; srt=[]; concat=[]; t=0.0
+gpt_assets=[
+    '01-开场冲刺.png', '02-瞬时功率.png', '03-电机与电池.png',
+    '04-功率链路.png', '05-机械传动.png', '06-结构惯量.png',
+    '07-热管理.png', '08-耐久测试.png', '09-系统工程结论.png',
+]
 image_style='电影级中国“荣耀闪电”人形机器人工程纪录片，写实工程可视化，深蓝色背景，克制的橙色能量高光，构图干净。'
 negative_prompt='任何文字、汉字、英文字母、数字、标签、标题、字幕、水印、标志、界面、信息图、图表、示意图、比例文字。'
 total_sections=len(sections)
+if generate_images and image_provider != 'qwen':
+    raise SystemExit('当前主配置为 GPT 生图：请先通过 GPT 图像工作流生成并审核分镜，再用 USE_EXISTING_IMAGES=1 渲染。Qwen 仅作为备选：IMAGE_PROVIDER=qwen GENERATE_IMAGES=1 ./render.sh')
 english_subtitles=[
     'When a robot sprints, who is really delivering the power',
     'It is not just one motor, but an entire power chain',
@@ -144,15 +151,16 @@ for i,(title,body,visual) in enumerate(sections,1):
         except Exception as e: raise SystemExit(f'硅基流动 TTS 失败（未输出密钥）：{e}')
     dur=float(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','default=nw=1:nk=1',str(audio)]))
     color=['0x10233f','0x123b4a','0x26324d'][i%3]
-    image=build/f'{i:02d}.png'
+    qwen_image=build/f'{i:02d}.png'
+    image=(root/'assets/gpt5.6'/gpt_assets[i-1]) if image_provider == 'gpt' else qwen_image
     should_generate_image=generate_images and (not image_scenes or i in image_scenes)
     if should_generate_image:
-        print(f'{prefix}：生成 Qwen-Image 分镜图…', flush=True)
+        print(f'{prefix}：生成备选 Qwen-Image 分镜图…', flush=True)
         prompt=f'{image_style}. {visual}'
         image_req=urllib.request.Request('https://api.siliconflow.cn/v1/images/generations', data=json.dumps({'model':'Qwen/Qwen-Image','prompt':prompt,'negative_prompt':negative_prompt,'image_size':'1664x928','num_inference_steps':20,'cfg':4.0}).encode(), headers={'Authorization':'Bearer '+key,'Content-Type':'application/json'})
         try:
             with urllib.request.urlopen(image_req, timeout=180) as r: image_url=json.load(r)['images'][0]['url']
-            with urllib.request.urlopen(image_url, timeout=180) as r: image.write_bytes(r.read())
+            with urllib.request.urlopen(image_url, timeout=180) as r: qwen_image.write_bytes(r.read())
         except Exception as e: raise SystemExit(f'硅基流动 Qwen-Image 失败（未输出密钥）：{e}')
     elif use_existing_images and not image.exists:
         raise SystemExit(f'缺少已有分镜图：{image}；请移除 USE_EXISTING_IMAGES=1 或先生成图片。')
@@ -181,7 +189,7 @@ for i,(title,body,visual) in enumerate(sections,1):
 concat.append(f"file '{build/'outro.mp4'}")
 if translation_index != len(english_subtitles): raise SystemExit('英文字幕存在未使用条目')
 (build/'concat.txt').write_text('\n'.join(concat)+'\n'); (build/'subtitles.srt').write_text('\n'.join(srt), encoding='utf-8')
-prompt_doc=['# Qwen-Image 分镜提示词', '', f'统一风格：{image_style}', f'负面提示词：{negative_prompt}', '']
+prompt_doc=['# GPT 图像工作流分镜提示词', '', '主配置：GPT 图像工作流；Qwen 仅作备选。', '动态镜头准入：跑步、冲刺、上坡时必须人工检查对侧臂腿反向摆动、躯干不过度前倾、高髋和细长连杆腿比例。文生图无法保证运动学正确；严格步态请使用骨骼或三维动画。', f'统一风格：{image_style}', f'负面提示词：{negative_prompt}', '']
 for i,(title,_,visual) in enumerate(sections,1): prompt_doc += [f'## {i:02d} {title}', visual, '']
 (out/'分镜提示词.md').write_text('\n'.join(prompt_doc), encoding='utf-8')
 print(f'全部 {total_sections} 个分镜完成，累计时长 {t:.1f}s。', flush=True)

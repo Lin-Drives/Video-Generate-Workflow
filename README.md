@@ -13,15 +13,23 @@ export SILICONFLOW_API_KEY='你的密钥'   # 只在当前终端会话中设置�
 
 没有 API 密钥时脚本会停止在配音步骤，避免误把占位音频当成成片。密钥由硅基流动控制台创建；不要写入项目文件或提交到版本控制。
 
-## 启用 Qwen-Image 分镜图
+## GPT 生图主配置与 Qwen 备选
 
-默认使用纯色背景，不产生图片生成费用。确认要为 9 个分镜生成并下载 16:9 图片时，在同一终端执行：
+默认主配置为 GPT 生图：先依据 `outputs/分镜提示词.md` 生成、审核分镜，再将通过审核的图片保存到 `assets/gpt5.6/`（文件名沿用 `01-开场冲刺.png` 至 `09-系统工程结论.png`），随后渲染：
 
 ```bash
-GENERATE_IMAGES=1 ./render.sh
+REUSE_AUDIO=1 USE_EXISTING_IMAGES=1 ./render.sh
 ```
 
-脚本使用 `Qwen/Qwen-Image`，并会立即下载接口返回的图片，避免临时 URL 过期。
+GPT 分镜必须以角色参考图为准。对于跑步、冲刺、上坡等动态姿态，需同时检查：对侧臂腿反向摆动、躯干不过度前倾、高髋、细长连杆腿比例；单帧好看不等于动作正确。
+
+经验记录：文生图对跑姿的运动学一致性仍有随机性，不能把一次生成当作事实正确。动态镜头必须经人工审核；若需要严格、可复现的步态，应改用骨骼动画或三维动画后再渲染，而不是反复抽图。
+
+Qwen 仅作成本较低的备选，不得作为最终动态人物镜头的默认来源。确有需要时才显式启用：
+
+```bash
+IMAGE_PROVIDER=qwen GENERATE_IMAGES=1 ./render.sh
+```
 
 图片、配音均已生成但只需重新封装视频或验证 IINA 字幕时，可复用本地素材而不调用 API：
 
@@ -34,7 +42,7 @@ REUSE_AUDIO=1 USE_EXISTING_IMAGES=1 ./render.sh
 视频同时会直接烧录字幕，播放器无需加载字幕轨。只重做指定分镜图片时，可复用配音并指定序号：
 
 ```bash
-REUSE_AUDIO=1 GENERATE_IMAGES=1 IMAGE_SCENES=1,2,7 ./render.sh
+REUSE_AUDIO=1 IMAGE_PROVIDER=qwen GENERATE_IMAGES=1 IMAGE_SCENES=1,2,7 ./render.sh
 ```
 
 ## 字幕制作规范（已验证）
