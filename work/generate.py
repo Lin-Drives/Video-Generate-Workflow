@@ -121,7 +121,8 @@ def title_card(chinese, english, path, cta=None):
     canvas.save(path)
 
 def render_title_clip(background, overlay, clip, duration):
-    subprocess.run(['ffmpeg','-y','-v','error','-loop','1','-framerate','30','-i',str(background),'-loop','1','-framerate','30','-i',str(overlay),'-f','lavfi','-i','anullsrc=channel_layout=stereo:sample_rate=48000','-filter_complex',f'[0:v]scale=2020:1136,crop=1920:1080,fade=t=in:st=0:d=0.45,fade=t=out:st={duration-0.45}:d=0.45[base];[base][1:v]overlay=0:0,format=yuv420p[v]','-map','[v]','-map','2:a','-t',str(duration),'-c:v','libx264','-c:a','aac','-shortest',str(clip)],check=True)
+    # Match the CosyVoice clips exactly; concat demuxing cannot safely mix AAC formats.
+    subprocess.run(['ffmpeg','-y','-v','error','-loop','1','-framerate','30','-i',str(background),'-loop','1','-framerate','30','-i',str(overlay),'-f','lavfi','-i','anullsrc=channel_layout=mono:sample_rate=24000','-filter_complex',f'[0:v]scale=2020:1136,crop=1920:1080,fade=t=in:st=0:d=0.45,fade=t=out:st={duration-0.45}:d=0.45[base];[base][1:v]overlay=0:0,format=yuv420p[v]','-map','[v]','-map','2:a','-t',str(duration),'-c:v','libx264','-c:a','aac','-ar','24000','-ac','1','-shortest',str(clip)],check=True)
 
 intro_overlay=build/'intro-title.png'; outro_overlay=build/'outro-title.png'
 title_card('机器人为什么能冲刺？','WHY CAN A ROBOT SPRINT?',intro_overlay)
