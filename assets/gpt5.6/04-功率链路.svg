@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071523"/><stop offset="1" stop-color="#112d47"/></linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f4513e"/><stop offset="1" stop-color="#8d1f25"/></linearGradient>
+    <marker id="a" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0 L12 6 L0 12 Z" fill="#ff9a3b"/></marker>
+    <style>.name{font:700 34px 'STHeiti SC','PingFang SC',sans-serif;fill:#fff}.val{font:700 30px 'STHeiti SC','PingFang SC',sans-serif;fill:#ffb35d}.hint{font:400 25px 'STHeiti SC','PingFang SC',sans-serif;fill:#a9c3d7}</style>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <text x="960" y="190" text-anchor="middle" class="hint">电能 → 电磁扭矩 → 关节扭矩 → 脚底推力</text>
+  <g fill="#102b41" stroke="#42617d" stroke-width="3">
+    <rect x="85" y="400" width="230" height="240" rx="28"/><rect x="385" y="400" width="230" height="240" rx="28"/>
+    <rect x="685" y="400" width="230" height="240" rx="28"/><rect x="985" y="400" width="230" height="240" rx="28"/>
+    <rect x="1285" y="400" width="230" height="240" rx="28"/><rect x="1585" y="400" width="250" height="240" rx="28"/>
+  </g>
+  <g fill="url(#red)" stroke="#ff816d" stroke-width="3"><rect x="141" y="465" width="118" height="75" rx="14"/><rect x="444" y="454" width="112" height="94" rx="14"/><rect x="741" y="454" width="118" height="94" rx="14"/></g>
+  <g fill="none" stroke="#6cc3f4" stroke-width="14"><circle cx="1100" cy="500" r="50"/><path d="M1063 500h74M1100 463v74"/><circle cx="1400" cy="500" r="50"/><circle cx="1710" cy="500" r="45"/></g>
+  <g stroke="#ff9a3b" stroke-width="11" fill="none" marker-end="url(#a)"><path d="M320 520h55"/><path d="M620 520h55"/><path d="M920 520h55"/><path d="M1220 520h55"/><path d="M1520 520h55"/></g>
+  <g text-anchor="middle"><text x="200" y="705" class="name">电池包</text><text x="500" y="705" class="name">保护 / 接触器</text><text x="800" y="705" class="name">直流母线</text><text x="1100" y="705" class="name">逆变器 + 电机</text><text x="1400" y="705" class="name">减速器 / 连杆</text><text x="1710" y="705" class="name">脚底</text></g>
+  <g text-anchor="middle"><text x="347" y="355" class="val">48 V</text><text x="647" y="355" class="val">80 A</text><text x="947" y="355" class="val">3.8 kW</text><text x="1247" y="355" class="val">45 N·m</text><text x="1547" y="355" class="val">210 N·m</text></g>
+  <text x="960" y="875" text-anchor="middle" class="hint">数值为关系示意，非原型实测规格</text>
+</svg>
