@@ -52,3 +52,11 @@ REUSE_AUDIO=1 GENERATE_IMAGES=1 IMAGE_SCENES=1,2,7 ./render.sh
 ```bash
 REUSE_AUDIO=1 USE_EXISTING_IMAGES=1 OUTPUT_BASENAME='机器人冲刺的那几秒-中英字幕版' ./render.sh
 ```
+
+## 片头与片尾（已验证）
+
+渲染脚本会自动在正片前后加入片头和片尾，均复用项目现有的分镜图，不依赖外部下载资源：
+
+- 片头：复用 `01-开场冲刺.png`，3.5 秒淡入推近，显示中英双语标题。
+- 片尾：复用 `09-系统工程结论.png`，5 秒淡出，显示系统工程结论与关注 CTA。
+- 片头与片尾均带静音 AAC 音轨，保证可以和正片的配音片段无缝拼接；SRT 时间轴从片头结束后开始。

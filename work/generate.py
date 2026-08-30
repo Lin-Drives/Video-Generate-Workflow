@@ -2,6 +2,7 @@ import json, os, re, subprocess, sys, urllib.request
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 root, build = map(Path, sys.argv[1:]); out=root/'outputs'; build.mkdir(parents=True, exist_ok=True)
+INTRO_DURATION=3.5; OUTRO_DURATION=5.0
 sections=[
 ('开场：冲刺的几秒','机器人冲刺时，到底是谁在出力？答案不是单独一台电机，而是一整条功率链。','在深蓝色背景下，聚光灯下的体育场百米跑道内，一台“荣耀闪电”人形机器人正在快速起跑冲刺，低机位，突出腿部执行器和关节，强烈的运动感。'),
 ('先看瞬时功率','起跑瞬间，系统需要的是短时间的大功率。电池要能稳定提供电流，母线、连接器和驱动器也要承受电压与电流变化。','“荣耀闪电”人形机器人用的高功率电池包、铜制母线和集成式的小型关节电机的近景特写，橙色能量光流沿着部件之间传递。'),
@@ -107,6 +108,27 @@ def subtitle_image(chinese, english, path):
     draw.multiline_text((x,y),text,font=font,fill='white',spacing=12,align='center',stroke_width=2,stroke_fill=(0,0,0,255))
     draw.text(((1920-(en_box[2]-en_box[0]))//2, y+(box[3]-box[1])+14),english,font=english_font,fill=(220,225,232),stroke_width=1,stroke_fill=(0,0,0,220))
     canvas.save(path)
+
+def title_card(chinese, english, path, cta=None):
+    canvas=Image.new('RGBA',(1920,1080),(0,0,0,0)); draw=ImageDraw.Draw(canvas)
+    cn_font=ImageFont.truetype('/System/Library/Fonts/Hiragino Sans GB.ttc',64,index=2)
+    en_font=ImageFont.truetype('/System/Library/Fonts/Supplemental/Arial.ttf',32)
+    cta_font=ImageFont.truetype('/System/Library/Fonts/Hiragino Sans GB.ttc',32,index=2)
+    def centered(text, font, y, color):
+        box=draw.textbbox((0,0),text,font=font); draw.text(((1920-(box[2]-box[0]))//2,y),text,font=font,fill=color,stroke_width=2,stroke_fill=(0,0,0,230))
+    centered(chinese,cn_font,760,(255,255,255,255)); centered(english,en_font,844,(215,224,238,255))
+    if cta: centered(cta,cta_font,936,(245,160,76,255))
+    canvas.save(path)
+
+def render_title_clip(background, overlay, clip, duration):
+    subprocess.run(['ffmpeg','-y','-v','error','-loop','1','-framerate','30','-i',str(background),'-loop','1','-framerate','30','-i',str(overlay),'-f','lavfi','-i','anullsrc=channel_layout=stereo:sample_rate=48000','-filter_complex',f'[0:v]scale=2020:1136,crop=1920:1080,fade=t=in:st=0:d=0.45,fade=t=out:st={duration-0.45}:d=0.45[base];[base][1:v]overlay=0:0,format=yuv420p[v]','-map','[v]','-map','2:a','-t',str(duration),'-c:v','libx264','-c:a','aac','-shortest',str(clip)],check=True)
+
+intro_overlay=build/'intro-title.png'; outro_overlay=build/'outro-title.png'
+title_card('机器人为什么能冲刺？','WHY CAN A ROBOT SPRINT?',intro_overlay)
+render_title_clip(root/'assets/gpt5.6/01-开场冲刺.png', intro_overlay, build/'intro.mp4', INTRO_DURATION)
+title_card('真正的速度，来自系统工程','SPEED IS A SYSTEM ENGINEERING RESULT',outro_overlay,'关注获取更多工程拆解')
+render_title_clip(root/'assets/gpt5.6/09-系统工程结论.png', outro_overlay, build/'outro.mp4', OUTRO_DURATION)
+concat.append(f"file '{build/'intro.mp4'}"); t=INTRO_DURATION
 translation_index=0
 for i,(title,body,visual) in enumerate(sections,1):
     prefix=f'[{i}/{total_sections}] {title}'
@@ -155,6 +177,7 @@ for i,(title,body,visual) in enumerate(sections,1):
         srt += [str(len(srt)//4+1),f'{stamp(t)} --> {stamp(t+segment)}',f'{screen_text(chunk)}\n{english.rstrip(".!?;:, ")}', '']
         t+=segment; elapsed+=segment
     print(f'{prefix}：完成（累计 {t:.1f}s）', flush=True)
+concat.append(f"file '{build/'outro.mp4'}")
 if translation_index != len(english_subtitles): raise SystemExit('英文字幕存在未使用条目')
 (build/'concat.txt').write_text('\n'.join(concat)+'\n'); (build/'subtitles.srt').write_text('\n'.join(srt), encoding='utf-8')
 prompt_doc=['# Qwen-Image 分镜提示词', '', f'统一风格：{image_style}', f'负面提示词：{negative_prompt}', '']
