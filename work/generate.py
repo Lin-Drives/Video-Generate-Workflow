@@ -17,6 +17,32 @@ key=os.environ.get('SILICONFLOW_API_KEY'); generate_images=os.environ.get('GENER
 image_style='电影级中国“荣耀闪电”人形机器人工程纪录片，写实工程可视化，深蓝色背景，克制的橙色能量高光，构图干净。'
 negative_prompt='任何文字、汉字、英文字母、数字、标签、标题、字幕、水印、标志、界面、信息图、图表、示意图、比例文字。'
 total_sections=len(sections)
+english_subtitles=[
+    'When a robot sprints, who is really delivering the power',
+    'It is not just one motor, but an entire power chain',
+    'At launch, the system needs high power for a brief moment',
+    'The battery must deliver current steadily',
+    'Busbars, connectors, and drives must also withstand changing voltage and current',
+    'The battery supplies energy, and the inverter turns it into current for the motor',
+    'The motor then turns electrical energy into torque',
+    'Voltage, current, speed, and temperature together define the output limits',
+    'From cells to the pack, then through protection, busbars, drives, and motors',
+    'Every link has resistance, losses, and protection strategies',
+    'High power magnifies voltage drop and heat',
+    'Motor torque still travels through the reducer, bearings, and links to the foot',
+    'Gear ratio balances speed, torque, efficiency, backdrivability, and life',
+    'The robot moves not only its payload, but also its own legs, arms, and torso',
+    'A heavier structure can be stronger, but it also raises inertia and peak power demand',
+    'Short bursts do not equal continuous operation',
+    'Once motors, power devices, and batteries heat up, the controller may derate',
+    'Sensors, thermal paths, and cooling decide whether the system can repeat the task',
+    'A car can sprint hard without being able to climb continuously',
+    'The same is true for robots: peak speed is a demonstration capability',
+    'Repeatable, predictable output is the real engineering capability',
+    'Sprint speed is the joint result of motors, control, and mechanics',
+    'Reliable sustained speed also depends on the battery, power chain, and thermal design',
+    'Structure and safety strategy are part of that result too',
+]
 def stamp(x):
     h=int(x//3600); m=int(x%3600//60); sec=x%60
     return f'{h:02d}:{m:02d}:{sec:06.3f}'.replace('.',',')
@@ -59,9 +85,14 @@ def subtitle_chunks(text, maximum=29):
             chunks.append(current)
     return chunks or [text]
 
-def subtitle_image(text, path):
+def screen_text(text):
+    return text.rstrip('，。！？； ')
+
+def subtitle_image(chinese, english, path):
     canvas=Image.new('RGBA',(1920,1080),(0,0,0,0)); draw=ImageDraw.Draw(canvas)
-    font=ImageFont.truetype('/System/Library/Fonts/STHeiti Medium.ttc',42,index=0)
+    font=ImageFont.truetype('/System/Library/Fonts/Hiragino Sans GB.ttc',42,index=2)
+    english_font=ImageFont.truetype('/System/Library/Fonts/Supplemental/Arial.ttf',27)
+    text=screen_text(chinese); english=english.rstrip('.!?;:, ')
     lines=[]; line=''
     for char in text:
         candidate=line+char
@@ -70,10 +101,13 @@ def subtitle_image(text, path):
         else: line=candidate
     if line: lines.append(line)
     text='\n'.join(lines); box=draw.multiline_textbbox((0,0),text,font=font,spacing=12,align='center',stroke_width=2)
-    width=box[2]-box[0]; height=box[3]-box[1]; x=(1920-width)//2; y=984-height
+    en_box=draw.textbbox((0,0),english,font=english_font,stroke_width=1)
+    width=max(box[2]-box[0], en_box[2]-en_box[0]); height=(box[3]-box[1])+(en_box[3]-en_box[1])+14; x=(1920-width)//2; y=972-height
     draw.rounded_rectangle((x-30,y-16,x+width+30,y+height+16),radius=16,fill=(0,0,0,165))
     draw.multiline_text((x,y),text,font=font,fill='white',spacing=12,align='center',stroke_width=2,stroke_fill=(0,0,0,255))
+    draw.text(((1920-(en_box[2]-en_box[0]))//2, y+(box[3]-box[1])+14),english,font=english_font,fill=(220,225,232),stroke_width=1,stroke_fill=(0,0,0,220))
     canvas.save(path)
+translation_index=0
 for i,(title,body,visual) in enumerate(sections,1):
     prefix=f'[{i}/{total_sections}] {title}'
     audio=build/f'{i:02d}.mp3'
@@ -105,7 +139,10 @@ for i,(title,body,visual) in enumerate(sections,1):
     elapsed=0.0
     for j, (chunk, weight) in enumerate(zip(chunks, weights), 1):
         segment=dur*weight/sum(weights) if j < len(chunks) else dur-elapsed
-        subtitle=build/f'{i:02d}-{j:02d}-subtitle.png'; subtitle_image(chunk,subtitle)
+        if translation_index >= len(english_subtitles):
+            raise SystemExit('英文字幕条目数量与中文意群不一致')
+        english=english_subtitles[translation_index]; translation_index+=1
+        subtitle=build/f'{i:02d}-{j:02d}-subtitle.png'; subtitle_image(chunk,english,subtitle)
         clip=build/f'{i:02d}-{j:02d}.mp4'
         if (generate_images or use_existing_images) and image.exists():
             video_input=['-loop','1','-framerate','30','-i',str(image)]
@@ -115,9 +152,10 @@ for i,(title,body,visual) in enumerate(sections,1):
             filter_graph='[0:v][1:v]overlay=0:0,format=yuv420p[v]'
         subprocess.run(['ffmpeg','-y','-v','error',*video_input,'-loop','1','-framerate','30','-i',str(subtitle),'-ss',str(elapsed),'-t',str(segment),'-i',str(audio),'-filter_complex',filter_graph,'-map','[v]','-map','2:a','-c:v','libx264','-t',str(segment),'-c:a','aac','-shortest',str(clip)],check=True)
         concat.append(f"file '{clip}'")
-        srt += [str(len(srt)//4+1),f'{stamp(t)} --> {stamp(t+segment)}',chunk,'']
+        srt += [str(len(srt)//4+1),f'{stamp(t)} --> {stamp(t+segment)}',f'{screen_text(chunk)}\n{english.rstrip(".!?;:, ")}', '']
         t+=segment; elapsed+=segment
     print(f'{prefix}：完成（累计 {t:.1f}s）', flush=True)
+if translation_index != len(english_subtitles): raise SystemExit('英文字幕存在未使用条目')
 (build/'concat.txt').write_text('\n'.join(concat)+'\n'); (build/'subtitles.srt').write_text('\n'.join(srt), encoding='utf-8')
 prompt_doc=['# Qwen-Image 分镜提示词', '', f'统一风格：{image_style}', f'负面提示词：{negative_prompt}', '']
 for i,(title,_,visual) in enumerate(sections,1): prompt_doc += [f'## {i:02d} {title}', visual, '']
