@@ -1,4 +1,4 @@
-import json, os, subprocess, sys, urllib.request
+import json, os, re, subprocess, sys, urllib.request
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 root, build = map(Path, sys.argv[1:]); out=root/'outputs'; build.mkdir(parents=True, exist_ok=True)
@@ -20,19 +20,42 @@ total_sections=len(sections)
 def stamp(x):
     h=int(x//3600); m=int(x%3600//60); sec=x%60
     return f'{h:02d}:{m:02d}:{sec:06.3f}'.replace('.',',')
+def normalize_screen_text(text):
+    """Keep on-screen Chinese punctuation consistent and remove noisy marks."""
+    text=text.replace('：', '，').replace('；', '，').replace('、', '，')
+    text=re.sub(r'[“”\"‘’]', '', text)
+    text=re.sub(r'[,，]{2,}', '，', text)
+    text=re.sub(r'[。！？]{2,}', '。', text)
+    return text.strip('，。！？ ')
+
+def subtitle_chunks(text, target=18, maximum=23):
+    """Split narration into short, screen-readable semantic phrases."""
+    text=normalize_screen_text(text)
+    phrases=[x.strip('，。！？ ') for x in re.split(r'[，。！？]+', text) if x.strip('，。！？ ')]
+    chunks=[]
+    for phrase in phrases:
+        while len(phrase) > maximum:
+            cut=max(phrase.rfind('的', target-5, maximum), phrase.rfind('和', target-5, maximum), phrase.rfind('与', target-5, maximum))
+            cut=cut+1 if cut >= target-5 else target
+            chunks.append(phrase[:cut])
+            phrase=phrase[cut:]
+        if phrase:
+            chunks.append(phrase)
+    return chunks or [text]
+
 def subtitle_image(text, path):
     canvas=Image.new('RGBA',(1920,1080),(0,0,0,0)); draw=ImageDraw.Draw(canvas)
-    font=ImageFont.truetype('/System/Library/Fonts/STHeiti Medium.ttc',48,index=0)
+    font=ImageFont.truetype('/System/Library/Fonts/STHeiti Medium.ttc',42,index=0)
     lines=[]; line=''
     for char in text:
         candidate=line+char
-        if draw.textbbox((0,0),candidate,font=font)[2] > 1640:
+        if draw.textbbox((0,0),candidate,font=font)[2] > 1320:
             lines.append(line); line=char
         else: line=candidate
     if line: lines.append(line)
     text='\n'.join(lines); box=draw.multiline_textbbox((0,0),text,font=font,spacing=12,align='center',stroke_width=2)
-    width=box[2]-box[0]; height=box[3]-box[1]; x=(1920-width)//2; y=1000-height
-    draw.rounded_rectangle((x-34,y-20,x+width+34,y+height+20),radius=18,fill=(0,0,0,175))
+    width=box[2]-box[0]; height=box[3]-box[1]; x=(1920-width)//2; y=984-height
+    draw.rounded_rectangle((x-30,y-16,x+width+30,y+height+16),radius=16,fill=(0,0,0,165))
     draw.multiline_text((x,y),text,font=font,fill='white',spacing=12,align='center',stroke_width=2,stroke_fill=(0,0,0,255))
     canvas.save(path)
 for i,(title,body,visual) in enumerate(sections,1):
@@ -47,9 +70,8 @@ for i,(title,body,visual) in enumerate(sections,1):
             with urllib.request.urlopen(req, timeout=120) as r: audio.write_bytes(r.read())
         except Exception as e: raise SystemExit(f'硅基流动 TTS 失败（未输出密钥）：{e}')
     dur=float(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','default=nw=1:nk=1',str(audio)]))
-    clip=build/f'{i:02d}.mp4'; color=['0x10233f','0x123b4a','0x26324d'][i%3]
+    color=['0x10233f','0x123b4a','0x26324d'][i%3]
     image=build/f'{i:02d}.png'
-    subtitle=build/f'{i:02d}-subtitle.png'; subtitle_image(body,subtitle)
     should_generate_image=generate_images and (not image_scenes or i in image_scenes)
     if should_generate_image:
         print(f'{prefix}：生成 Qwen-Image 分镜图…', flush=True)
@@ -61,16 +83,24 @@ for i,(title,body,visual) in enumerate(sections,1):
         except Exception as e: raise SystemExit(f'硅基流动 Qwen-Image 失败（未输出密钥）：{e}')
     elif use_existing_images and not image.exists:
         raise SystemExit(f'缺少已有分镜图：{image}；请移除 USE_EXISTING_IMAGES=1 或先生成图片。')
-    print(f'{prefix}：渲染视频片段…', flush=True)
-    if (generate_images or use_existing_images) and image.exists():
-        video_input=['-loop','1','-framerate','30','-i',str(image)]
-        filter_graph='[0:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080[base];[base][1:v]overlay=0:0,format=yuv420p[v]'
-    else:
-        video_input=['-f','lavfi','-i',f'color=c={color}:s=1920x1080:r=30:d={dur}']
-        filter_graph='[0:v][1:v]overlay=0:0,format=yuv420p[v]'
-    subprocess.run(['ffmpeg','-y','-v','error',*video_input,'-loop','1','-framerate','30','-i',str(subtitle),'-i',str(audio),'-filter_complex',filter_graph,'-map','[v]','-map','2:a','-c:v','libx264','-t',str(dur),'-c:a','aac','-shortest',str(clip)],check=True)
-    concat.append(f"file '{clip}'")
-    srt += [str(i),f'{stamp(t)} --> {stamp(t+dur)}',body,'']; t+=dur
+    print(f'{prefix}：按短句渲染字幕片段…', flush=True)
+    chunks=subtitle_chunks(body)
+    weights=[max(len(chunk), 8) for chunk in chunks]
+    elapsed=0.0
+    for j, (chunk, weight) in enumerate(zip(chunks, weights), 1):
+        segment=dur*weight/sum(weights) if j < len(chunks) else dur-elapsed
+        subtitle=build/f'{i:02d}-{j:02d}-subtitle.png'; subtitle_image(chunk,subtitle)
+        clip=build/f'{i:02d}-{j:02d}.mp4'
+        if (generate_images or use_existing_images) and image.exists():
+            video_input=['-loop','1','-framerate','30','-i',str(image)]
+            filter_graph='[0:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080[base];[base][1:v]overlay=0:0,format=yuv420p[v]'
+        else:
+            video_input=['-f','lavfi','-i',f'color=c={color}:s=1920x1080:r=30:d={segment}']
+            filter_graph='[0:v][1:v]overlay=0:0,format=yuv420p[v]'
+        subprocess.run(['ffmpeg','-y','-v','error',*video_input,'-loop','1','-framerate','30','-i',str(subtitle),'-ss',str(elapsed),'-t',str(segment),'-i',str(audio),'-filter_complex',filter_graph,'-map','[v]','-map','2:a','-c:v','libx264','-t',str(segment),'-c:a','aac','-shortest',str(clip)],check=True)
+        concat.append(f"file '{clip}'")
+        srt += [str(len(srt)//4+1),f'{stamp(t)} --> {stamp(t+segment)}',chunk,'']
+        t+=segment; elapsed+=segment
     print(f'{prefix}：完成（累计 {t:.1f}s）', flush=True)
 (build/'concat.txt').write_text('\n'.join(concat)+'\n'); (build/'subtitles.srt').write_text('\n'.join(srt), encoding='utf-8')
 prompt_doc=['# Qwen-Image 分镜提示词', '', f'统一风格：{image_style}', f'负面提示词：{negative_prompt}', '']
