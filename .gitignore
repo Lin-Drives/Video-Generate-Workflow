@@ -3,6 +3,7 @@
 # 本机密钥与生成产物
 .env
 outputs/*.mp4
+outputs/*.srt
 outputs/验收信息.txt
 work/build/
 work/pycache/

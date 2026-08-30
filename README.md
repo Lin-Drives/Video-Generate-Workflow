@@ -22,3 +22,17 @@ GENERATE_IMAGES=1 ./render.sh
 ```
 
 脚本使用 `Qwen/Qwen-Image`，并会立即下载接口返回的图片，避免临时 URL 过期。
+
+图片、配音均已生成但只需重新封装视频或验证 IINA 字幕时，可复用本地素材而不调用 API：
+
+```bash
+REUSE_AUDIO=1 USE_EXISTING_IMAGES=1 ./render.sh
+```
+
+字幕会以与视频同名的 `.srt` 文件导出，IINA 会自动加载；若未自动加载，可在 IINA 的“字幕”菜单中选择该文件。
+
+视频同时会直接烧录中文字幕，播放器无需加载字幕轨。只重做指定分镜图片时，可复用配音并指定序号：
+
+```bash
+REUSE_AUDIO=1 GENERATE_IMAGES=1 IMAGE_SCENES=1,2,7 ./render.sh
+```
