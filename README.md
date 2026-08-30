@@ -33,7 +33,7 @@ export SILICONFLOW_API_KEY='你的密钥'   # 只在当前终端会话中设置�
 ./render.sh
 ```
 
-产物在 `outputs/`：视频、SRT 字幕、封面 SVG、标题草案和事实核验说明。
+产物在 `outputs/`：视频、SRT 字幕、封面 PNG、标题草案和事实核验说明。
 
 ## 二次编辑
 
