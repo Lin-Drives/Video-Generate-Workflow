@@ -1,0 +1,9 @@
+.DS_Store
+
+# 本机密钥与生成产物
+.env
+outputs/*.mp4
+outputs/验收信息.txt
+work/build/
+work/pycache/
+__pycache__/
