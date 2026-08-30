@@ -22,25 +22,41 @@ def stamp(x):
     return f'{h:02d}:{m:02d}:{sec:06.3f}'.replace('.',',')
 def normalize_screen_text(text):
     """Keep on-screen Chinese punctuation consistent and remove noisy marks."""
-    text=text.replace('：', '，').replace('；', '，').replace('、', '，')
+    text=text.replace('：', '，')
     text=re.sub(r'[“”\"‘’]', '', text)
     text=re.sub(r'[,，]{2,}', '，', text)
-    text=re.sub(r'[。！？]{2,}', '。', text)
-    return text.strip('，。！？ ')
+    text=re.sub(r'[。！？；]{2,}', '。', text)
+    return text.strip('， ')
 
-def subtitle_chunks(text, target=18, maximum=23):
-    """Split narration into short, screen-readable semantic phrases."""
+def subtitle_chunks(text, maximum=29):
+    """Prefer complete clauses; only split a sentence when it exceeds two short lines."""
     text=normalize_screen_text(text)
-    phrases=[x.strip('，。！？ ') for x in re.split(r'[，。！？]+', text) if x.strip('，。！？ ')]
     chunks=[]
-    for phrase in phrases:
-        while len(phrase) > maximum:
-            cut=max(phrase.rfind('的', target-5, maximum), phrase.rfind('和', target-5, maximum), phrase.rfind('与', target-5, maximum))
-            cut=cut+1 if cut >= target-5 else target
-            chunks.append(phrase[:cut])
-            phrase=phrase[cut:]
-        if phrase:
-            chunks.append(phrase)
+    sentences=re.findall(r'[^。！？；]+[。！？；]?', text)
+    for sentence in sentences:
+        if len(sentence) <= maximum:
+            chunks.append(sentence)
+            continue
+        clauses=re.findall(r'[^，]+，?', sentence)
+        current=''
+        for clause in clauses:
+            if len(current)+len(clause) <= maximum:
+                current+=clause
+            else:
+                if current:
+                    # Do not leave a short lead-in (for example, “持续可靠的速度，”)
+                    # alone when a comma-list can complete that semantic unit.
+                    room=maximum-len(current)
+                    joins=[match.end() for match in re.finditer('、', clause) if match.end() <= room]
+                    if len(current) <= 8 and joins:
+                        split=joins[-1]
+                        chunks.append(current+clause[:split])
+                        current=clause[split:]
+                        continue
+                    chunks.append(current)
+                current=clause
+        if current:
+            chunks.append(current)
     return chunks or [text]
 
 def subtitle_image(text, path):
