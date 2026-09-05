@@ -1,0 +1,104 @@
+1
+00:00:03,500 --> 00:00:07,402
+机器人冲刺之前，先要回答一个问题，我在哪
+Before a robot can sprint, it must first answer: where am I
+
+2
+00:00:07,402 --> 00:00:10,004
+看见世界，是所有动作的起点
+Seeing the world is the starting point of every action
+
+3
+00:00:10,004 --> 00:00:13,888
+摄像头便宜、信息量大，是机器人的主感官
+Cameras are cheap and information-rich: the robot's primary sense
+
+4
+00:00:13,888 --> 00:00:19,132
+但照片是平的，近处的人和远处的墙，看起来只是大小不同
+But a photo is flat: a person nearby and a far wall just differ in size
+
+5
+00:00:19,132 --> 00:00:22,628
+距离不会写在像素里，要靠算法算出来
+Distance is not written in pixels; algorithms must compute it
+
+6
+00:00:22,628 --> 00:00:26,550
+两个摄像头像人的双眼，用视差估计深度
+Two cameras work like human eyes, estimating depth from disparity
+
+7
+00:00:26,550 --> 00:00:30,884
+结构光和飞行时间相机，则主动发光去量距离
+Structured light and time-of-flight cameras actively emit light to measure it
+
+8
+00:00:30,884 --> 00:00:35,530
+激光雷达一圈圈扫描，直接给出精确的三维点云
+LiDAR scans round and round, producing precise 3D point clouds directly
+
+9
+00:00:35,530 --> 00:00:39,332
+它不怕黑，但贵，也分不清颜色和纹理
+It works in the dark, but it is costly and cannot read color or texture
+
+10
+00:00:39,332 --> 00:00:41,743
+没有一种传感器是万能的
+No single sensor can do everything
+
+11
+00:00:41,743 --> 00:00:45,560
+摄像头认得出物体，激光雷达量得准距离
+Cameras recognize objects; LiDAR measures distance accurately
+
+12
+00:00:45,560 --> 00:00:50,180
+把多种传感器对齐到同一个世界，才是真正的看见
+Aligning many sensors into one world is what seeing really means
+
+13
+00:00:50,180 --> 00:00:55,784
+神经网络把像素变成物体，这是门，那是台阶，前面有人
+Neural networks turn pixels into objects: a door, a step, a person ahead
+
+14
+00:00:55,784 --> 00:01:01,388
+机器人要知道的不只是有什么，还有能不能走、能不能抓
+The robot needs more than what is there: can I walk on it, can I grab it
+
+15
+00:01:01,388 --> 00:01:05,654
+感知要在几十毫秒内完成，慢一拍就可能撞上
+Perception must finish within tens of milliseconds; one beat late means a collision
+
+16
+00:01:05,654 --> 00:01:09,716
+算力有限，看得清和算得快之间永远在取舍
+Compute is limited: seeing clearly and computing fast is a constant trade-off
+
+17
+00:01:09,716 --> 00:01:13,781
+强光、黑夜、遮挡、反光，都会让传感器失灵
+Glare, darkness, occlusion, and reflections can all blind a sensor
+
+18
+00:01:13,781 --> 00:01:18,620
+好的系统不是从不出错，而是知道自己什么时候不可靠
+A good system never assumes it is right; it knows when it is unreliable
+
+19
+00:01:18,620 --> 00:01:20,957
+所以看见不是一台相机的事
+So seeing is not the job of a single camera
+
+20
+00:01:20,957 --> 00:01:24,732
+是传感器、算法、算力和安全策略的系统工程
+It is system engineering across sensors, algorithms, compute, and safety
+
+21
+00:01:24,732 --> 00:01:27,788
+感知越可靠，机器人的动作才敢越快
+The more reliable the perception, the faster the robot dares to move
