@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import json, os, re, subprocess, sys, urllib.request
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
