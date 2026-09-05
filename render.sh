@@ -3,7 +3,7 @@ set -euo pipefail
 ROOT="${0:A:h}"
 OUT="$ROOT/outputs"
 BUILD="$ROOT/work/build"
-OUTPUT_BASENAME="${OUTPUT_BASENAME:-机器人冲刺的那几秒}"
+OUTPUT_BASENAME="${OUTPUT_BASENAME:-机器人怎么看见世界}"
 IMAGE_PROVIDER="${IMAGE_PROVIDER:-gpt}"
 mkdir -p "$OUT" "$BUILD"
 if [[ "${REUSE_AUDIO:-}" != "1" || ( "${GENERATE_IMAGES:-}" == "1" && "$IMAGE_PROVIDER" == "qwen" ) ]]; then
