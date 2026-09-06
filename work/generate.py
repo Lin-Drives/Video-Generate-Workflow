@@ -115,19 +115,27 @@ def subtitle_image(chinese, english, path):
     font=ImageFont.truetype('/System/Library/Fonts/Hiragino Sans GB.ttc',42,index=2)
     english_font=ImageFont.truetype('/System/Library/Fonts/Supplemental/Arial.ttf',27)
     text=screen_text(chinese); english=english.rstrip('.!?;:, ')
-    lines=[]; line=''
-    for char in text:
-        candidate=line+char
-        if draw.textbbox((0,0),candidate,font=font)[2] > 1320:
-            lines.append(line); line=char
-        else: line=candidate
-    if line: lines.append(line)
-    text='\n'.join(lines); box=draw.multiline_textbbox((0,0),text,font=font,spacing=12,align='center',stroke_width=2)
+    # Avoid arbitrary character wraps: preserve semantic units such as “产生海量数据”.
+    lines=[text]
+    if draw.textbbox((0,0),text,font=font)[2] > 1320:
+        breaks=[m.end() for m in re.finditer(r'[，、；]', text)]
+        viable=[pos for pos in breaks if draw.textbbox((0,0),text[:pos],font=font)[2] <= 1320 and draw.textbbox((0,0),text[pos:],font=font)[2] <= 1320]
+        if viable:
+            split=min(viable, key=lambda pos: abs(pos-len(text)/2))
+            lines=[text[:split], text[split:]]
+    cn_boxes=[draw.textbbox((0,0),line,font=font,stroke_width=2) for line in lines]
     en_box=draw.textbbox((0,0),english,font=english_font,stroke_width=1)
-    width=max(box[2]-box[0], en_box[2]-en_box[0]); height=(box[3]-box[1])+(en_box[3]-en_box[1])+14; x=(1920-width)//2; y=972-height
+    width=max(*(box[2]-box[0] for box in cn_boxes), en_box[2]-en_box[0])
+    cn_heights=[box[3]-box[1] for box in cn_boxes]
+    height=sum(cn_heights)+12*(len(lines)-1)+(en_box[3]-en_box[1])+14
+    y=972-height; x=(1920-width)//2
     draw.rounded_rectangle((x-30,y-16,x+width+30,y+height+16),radius=16,fill=(0,0,0,165))
-    draw.multiline_text((x,y),text,font=font,fill='white',spacing=12,align='center',stroke_width=2,stroke_fill=(0,0,0,255))
-    draw.text(((1920-(en_box[2]-en_box[0]))//2, y+(box[3]-box[1])+14),english,font=english_font,fill=(220,225,232),stroke_width=1,stroke_fill=(0,0,0,220))
+    # Centre every line itself, instead of merely centring the overall text block.
+    for line, box, line_height in zip(lines, cn_boxes, cn_heights):
+        line_width=box[2]-box[0]
+        draw.text(((1920-line_width)//2,y),line,font=font,fill='white',stroke_width=2,stroke_fill=(0,0,0,255))
+        y += line_height+12
+    draw.text(((1920-(en_box[2]-en_box[0]))//2, y+2),english,font=english_font,fill=(220,225,232),stroke_width=1,stroke_fill=(0,0,0,220))
     canvas.save(path)
 
 def title_card(chinese, english, path, cta=None):
