@@ -189,7 +189,7 @@ for i,(title,body,visual) in enumerate(sections,1):
             if TTS_PROVIDER == 'edge':
                 edge_env={**os.environ, 'PYTHONPATH': EDGE_TTS_PYTHONPATH}
                 try:
-                    subprocess.run([sys.executable, '-m', 'edge_tts', '--voice', TTS_VOICE, '--rate', EDGE_TTS_RATE, '--text', tts_text(chunk), '--write-media', str(audio)], check=True, env=edge_env)
+                    subprocess.run([sys.executable, '-m', 'edge_tts', '--voice', TTS_VOICE, f'--rate={EDGE_TTS_RATE}', '--text', tts_text(chunk), '--write-media', str(audio)], check=True, env=edge_env)
                 except subprocess.CalledProcessError as e:
                     raise SystemExit(f'Edge TTS 失败：{e}')
             elif TTS_PROVIDER == 'siliconflow':
