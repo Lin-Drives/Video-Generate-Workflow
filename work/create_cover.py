@@ -20,12 +20,16 @@ def main():
     top = (scaled.height - H) // 2
     canvas = scaled.crop((left, top, left + W, top + H))
     draw = ImageDraw.Draw(canvas)
-    font = ImageFont.truetype(FONT, 104, index=2)
+    # Match the first film: oversized W6 white title, a tight dark shadow,
+    # and one warm engineering-orange underline.
+    font = ImageFont.truetype(FONT, 142, index=2)
     lines = ['机器人如何', '看见世界？']
-    x, y = 132, 360
+    x, y = 126, 252
     for line in lines:
-        draw.text((x, y), line, font=font, fill=(245, 249, 255), stroke_width=3, stroke_fill=(3, 14, 31))
-        y += 132
+        draw.text((x + 8, y + 10), line, font=font, fill=(2, 10, 22), stroke_width=5, stroke_fill=(2, 10, 22))
+        draw.text((x, y), line, font=font, fill=(252, 252, 250), stroke_width=1, stroke_fill=(252, 252, 250))
+        y += 166
+    draw.polygon([(126, 603), (825, 571), (830, 592), (121, 624)], fill=(255, 72, 30))
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(OUTPUT, quality=95)
     print(OUTPUT)
