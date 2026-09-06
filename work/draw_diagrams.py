@@ -80,12 +80,32 @@ def draw_lens(d, cx, cy, r):
 
 
 def draw_02_camera():
-    """传感器特写：优艾智合4.png 中部干净区域（黑色内凹传感器窗口 + 青绿灯带）。"""
-    src = Image.open(ROOT / 'assets' / '优艾智合4.png').convert('RGB')
-    crop = src.crop((370, 470, 1470, 1089))  # 1100x619，16:9，无水印无文字叠加
-    out = crop.resize((W, H), Image.LANCZOS)
-    out = out.filter(ImageFilter.UnsharpMask(radius=2, percent=60, threshold=2))
-    finish(out, '02-摄像头.png')
+    """摄像头的二维图像：清楚呈现近/远物体在照片中只表现为大小差异。"""
+    img, d = new_canvas()
+    # 左侧相机本体和镜头。
+    d.rounded_rectangle([S(150), S(390), S(470), S(690)], radius=S(36), fill=(29, 54, 84, 255), outline=LINE + (255,), width=S(5))
+    d.rounded_rectangle([S(120), S(450), S(180), S(630)], radius=S(15), fill=(42, 82, 116, 255), outline=LINE_DIM + (220,), width=S(4))
+    draw_lens(d, 470, 540, 122)
+    # 相机视锥：深浅两层，强调它只接收二维投影。
+    d.polygon([P((592, 432)), P((592, 648)), P((1010, 810)), P((1010, 270))], fill=TEAL + (22,))
+    d.line([P((592, 432)), P((1010, 270))], fill=TEAL + (170,), width=S(4))
+    d.line([P((592, 648)), P((1010, 810))], fill=TEAL + (170,), width=S(4))
+    # 右侧“照片”平面；画面内只有二维大小，没有深度刻度或文字。
+    frame = (1040, 180, 1760, 900)
+    d.rounded_rectangle([S(frame[0]), S(frame[1]), S(frame[2]), S(frame[3])], radius=S(32), fill=(12, 28, 50, 255), outline=LINE + (255,), width=S(6))
+    d.rectangle([S(1085), S(225), S(1715), S(855)], fill=(24, 52, 83, 255))
+    # 近物体：较大橙色人形轮廓；远物体：较小青绿方块，二者都落在同一平面中。
+    d.ellipse([S(1210), S(360), S(1330), S(480)], fill=ORANGE + (245,))
+    d.rounded_rectangle([S(1175), S(485), S(1365), S(720)], radius=S(52), fill=ORANGE + (220,))
+    d.line([P((1215, 700)), P((1190, 800))], fill=ORANGE + (245,), width=S(34))
+    d.line([P((1325, 700)), P((1350, 800))], fill=ORANGE + (245,), width=S(34))
+    d.rectangle([S(1510), S(470), S(1640), S(655)], fill=TEAL + (220,), outline=LINE + (230,), width=S(4))
+    for y in range(500, 640, 36):
+        d.line([P((1535, y)), P((1615, y))], fill=(210, 238, 245, 120), width=S(3))
+    # 从实体到照片的投影线，突出“像素只有大小”的含义。
+    for a, b, color in [((592, 470), (1210, 420), ORANGE), ((592, 610), (1365, 690), ORANGE), ((592, 500), (1510, 470), TEAL), ((592, 580), (1640, 655), TEAL)]:
+        d.line([P(a), P(b)], fill=color + (135,), width=S(3))
+    finish(img, '02-摄像头.png')
 
 
 def draw_03_obstacle():

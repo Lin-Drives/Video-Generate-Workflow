@@ -6,7 +6,7 @@ root, build = map(Path, sys.argv[1:]); out=root/'outputs'; build.mkdir(parents=T
 INTRO_DURATION=3.5; OUTRO_DURATION=5.0
 sections=[
 ('开场：先回答我在哪','机器人进入真实世界开始工作之前，先要回答一个问题，我在哪？看见世界，是所有动作的起点。','空旷的半导体洁净室走廊内，这台白色硅片搬运机器人静立，底盘黑色传感器窗口透出微弱橙色光，车身侧面青绿色状态灯带亮起，表现启动前的观察与定位瞬间。'),
-('摄像头：主感官','摄像头便宜、信息量大，是机器人的主感官。但照片是平的，近处的人和远处的墙，看起来只是大小不同。照片里只有颜色和亮度，距离要靠算法推出来。','这台硅片搬运机器人机身上视觉传感器的极近景特写：黑色内凹传感器窗口与机械臂腕部相机嵌在白色机身和深灰色手臂中，镜头镀膜反射出洁净室的灯光，突出眼睛的精密感。'),
+('摄像头：主感官','摄像头便宜、信息量大，是机器人的主感官。但照片是平的，近处的人和远处的墙，看起来只是大小不同。照片里只有颜色和亮度，距离要靠算法推出来。','工程图：左侧清晰相机镜头向右投影，右侧同一张平面图像中以大号人形和小号墙体图标表示近/远物体只呈现为大小差异；无深度刻度、无文字。'),
 ('双目：像人眼一样测距','两个摄像头像人的双眼，靠两张照片的视差估算深度。但它怕暗、怕白墙，表面没有纹理，就算不出深度。','这台硅片搬运机器人以双目摄像头注视右侧开放式晶圆承载舱，两枚镜头朝向同一目标，画面聚焦在镜头与承载舱的对视关系上，表现被动观察的测距方式。'),
 ('激光雷达：主动发光测距','激光雷达不一样，它主动发光，靠光往返一趟的时间测距。一圈圈扫描下来，直接给出精确的三维点云。它不怕黑，但贵，也分不清颜色和纹理。','这台硅片搬运机器人在洁净室中缓缓转向，底盘的黑色激光雷达窗口正在扫描，周围空间中悬浮着由细密橙色光点组成的三维点云，点云自然贴合墙面、机台与地面轮廓，写实光影质感。'),
 ('多传感器融合','没有一种传感器是万能的。摄像头认得出物体，激光雷达量得准距离。把多种传感器对齐到同一个世界，才是真正的看见。','这台硅片搬运机器人在成排的白色工艺机台之间穿行，底盘雷达窗口与机身摄像头同时亮起，周围环境被一层极淡的暖色光晕覆盖，表现多源信息被整合成统一世界模型，画面克制不炫技。'),
@@ -102,6 +102,10 @@ def subtitle_chunks(text, maximum=29):
 def screen_text(text):
     return text.rstrip('，。！？； ')
 
+def tts_text(text):
+    """CosyVoice treats Chinese enumeration commas too abruptly; use spoken pauses only."""
+    return text.replace('、', '，')
+
 def subtitle_image(chinese, english, path):
     canvas=Image.new('RGBA',(1920,1080),(0,0,0,0)); draw=ImageDraw.Draw(canvas)
     font=ImageFont.truetype('/System/Library/Fonts/Hiragino Sans GB.ttc',42,index=2)
@@ -169,7 +173,7 @@ for i,(title,body,visual) in enumerate(sections,1):
             print(f'{prefix}：复用意群配音 {j}/{len(chunks)}…', flush=True)
         else:
             print(f'{prefix}：生成意群配音 {j}/{len(chunks)}…', flush=True)
-            req=urllib.request.Request('https://api.siliconflow.cn/v1/audio/speech', data=json.dumps({'model':'FunAudioLLM/CosyVoice2-0.5B','voice':'FunAudioLLM/CosyVoice2-0.5B:alex','input':chunk,'response_format':'mp3','stream':False}).encode(), headers={'Authorization':'Bearer '+key,'Content-Type':'application/json'})
+            req=urllib.request.Request('https://api.siliconflow.cn/v1/audio/speech', data=json.dumps({'model':'FunAudioLLM/CosyVoice2-0.5B','voice':'FunAudioLLM/CosyVoice2-0.5B:alex','input':tts_text(chunk),'response_format':'mp3','stream':False}).encode(), headers={'Authorization':'Bearer '+key,'Content-Type':'application/json'})
             try:
                 with urllib.request.urlopen(req, timeout=120) as r: audio.write_bytes(r.read())
             except Exception as e: raise SystemExit(f'硅基流动 TTS 失败（未输出密钥）：{e}')
