@@ -6,7 +6,7 @@
 import random
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / 'assets' / 'ow12'
@@ -285,8 +285,70 @@ def draw_06_semantics():
     finish(img, '06-像素到语义.png')
 
 
+def draw_07_compute_board():
+    """实时性与算力：RK3588 边缘计算板与输入/输出外设的无文字图标关系图。"""
+    img, d = new_canvas()
+    # 中央嵌入式计算板：只保留型号文字，其他关系全部由图标表达。
+    board = (610, 230, 1310, 850)
+    d.rounded_rectangle([S(board[0]), S(board[1]), S(board[2]), S(board[3])], radius=S(38), fill=(25, 46, 71, 255), outline=TEAL + (220,), width=S(5))
+    for x in range(670, 1280, 74):
+        d.rectangle([S(x), S(214), S(x + 34), S(232)], fill=(218, 174, 80, 230))
+        d.rectangle([S(x), S(850), S(x + 34), S(868)], fill=(218, 174, 80, 230))
+    for y in range(292, 810, 74):
+        d.rectangle([S(592), S(y), S(610), S(y + 34)], fill=(218, 174, 80, 230))
+        d.rectangle([S(1310), S(y), S(1328), S(y + 34)], fill=(218, 174, 80, 230))
+    # SoC、内存和散热片。
+    d.rounded_rectangle([S(785), S(390), S(1135), S(650)], radius=S(24), fill=(10, 22, 40, 255), outline=ORANGE + (255,), width=S(6))
+    soc_font = ImageFont.truetype('/System/Library/Fonts/Supplemental/Arial Bold.ttf', S(52))
+    text = 'RK3588'
+    bbox = d.textbbox((0, 0), text, font=soc_font)
+    d.text((S(960) - (bbox[2] - bbox[0]) // 2, S(490)), text, font=soc_font, fill=(243, 248, 255, 255))
+    for y in range(300, 370, 18):
+        d.line([P((785, y)), P((1135, y))], fill=(126, 157, 190, 160), width=S(6))
+    for x in (690, 1190):
+        d.rounded_rectangle([S(x), S(690), S(x + 70), S(760)], radius=S(10), fill=(35, 66, 95, 255), outline=LINE_DIM + (200,), width=S(3))
+
+    def link(a, b, color):
+        d.line([P(a), P(b)], fill=color + (180,), width=S(5))
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        length = max((dx * dx + dy * dy) ** 0.5, 1)
+        ux, uy = dx / length, dy / length
+        px, py = -uy, ux
+        tip = b
+        base = (b[0] - ux * 22, b[1] - uy * 22)
+        d.polygon([P(tip), P((base[0] + px * 10, base[1] + py * 10)), P((base[0] - px * 10, base[1] - py * 10))], fill=color + (245,))
+
+    def node(cx, cy, color):
+        d.ellipse([S(cx - 76), S(cy - 76), S(cx + 76), S(cy + 76)], fill=(15, 31, 54, 245), outline=color + (255,), width=S(5))
+
+    # 左侧输入：相机、激光雷达、深度点阵。
+    for cx, cy, target, color in ((230, 330, (610, 380), LINE), (230, 540, (610, 540), ORANGE), (230, 750, (610, 700), TEAL)):
+        node(cx, cy, color); link((cx + 78, cy), target, color)
+    draw_lens(d, 230, 330, 38)
+    for r in (30, 52):
+        d.arc([S(230 - r), S(540 - r), S(230 + r), S(540 + r)], start=-55, end=55, fill=ORANGE + (255,), width=S(5))
+    d.ellipse([S(218), S(528), S(242), S(552)], fill=ORANGE + (255,))
+    for gy in range(3):
+        for gx in range(3):
+            x, y = 204 + gx * 26, 724 + gy * 26
+            d.ellipse([S(x), S(y), S(x + 12), S(y + 12)], fill=TEAL + (255,))
+
+    # 右侧输出：机械臂、网络、供电。
+    for cx, cy, target, color in ((1690, 330, (1310, 380), LINE), (1690, 540, (1310, 540), TEAL), (1690, 750, (1310, 700), ORANGE)):
+        node(cx, cy, color); link(target, (cx - 78, cy), color)
+    d.line([P((1644, 370)), P((1680, 320)), P((1720, 360)), P((1742, 304))], fill=LINE + (255,), width=S(14), joint='curve')
+    d.ellipse([S(1630), S(356), S(1658), S(384)], fill=LINE + (255,))
+    d.arc([S(1644), S(494), S(1736), S(586)], start=210, end=330, fill=TEAL + (255,), width=S(6))
+    d.arc([S(1660), S(510), S(1720), S(570)], start=210, end=330, fill=TEAL + (255,), width=S(6))
+    d.line([P((1688, 526)), P((1688, 556))], fill=TEAL + (255,), width=S(7))
+    d.rectangle([S(1654), S(724), S(1724), S(776)], outline=ORANGE + (255,), width=S(5))
+    d.polygon([P((1692, 730)), P((1670, 752)), P((1688, 752)), P((1678, 772)), P((1710, 746)), P((1692, 746))], fill=ORANGE + (255,))
+    finish(img, '07-实时性.png')
+
+
 if __name__ == '__main__':
     draw_02_camera()
     draw_03_obstacle()
     draw_05_fusion()
     draw_06_semantics()
+    draw_07_compute_board()

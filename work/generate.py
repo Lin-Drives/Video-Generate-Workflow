@@ -5,13 +5,13 @@ from PIL import Image, ImageDraw, ImageFont
 root, build = map(Path, sys.argv[1:]); out=root/'outputs'; build.mkdir(parents=True, exist_ok=True)
 INTRO_DURATION=3.5; OUTRO_DURATION=5.0
 sections=[
-('开场：先回答我在哪','机器人进入真实世界开始工作之前，先要回答一个问题，我在哪。看见世界，是所有动作的起点。','空旷的半导体洁净室走廊内，这台白色硅片搬运机器人静立，底盘黑色传感器窗口透出微弱橙色光，车身侧面青绿色状态灯带亮起，表现启动前的观察与定位瞬间。'),
+('开场：先回答我在哪','机器人进入真实世界开始工作之前，先要回答一个问题，我在哪？看见世界，是所有动作的起点。','空旷的半导体洁净室走廊内，这台白色硅片搬运机器人静立，底盘黑色传感器窗口透出微弱橙色光，车身侧面青绿色状态灯带亮起，表现启动前的观察与定位瞬间。'),
 ('摄像头：主感官','摄像头便宜、信息量大，是机器人的主感官。但照片是平的，近处的人和远处的墙，看起来只是大小不同。照片里只有颜色和亮度，距离要靠算法推出来。','这台硅片搬运机器人机身上视觉传感器的极近景特写：黑色内凹传感器窗口与机械臂腕部相机嵌在白色机身和深灰色手臂中，镜头镀膜反射出洁净室的灯光，突出眼睛的精密感。'),
 ('双目：像人眼一样测距','两个摄像头像人的双眼，靠两张照片的视差估算深度。但它怕暗、怕白墙，表面没有纹理，就算不出深度。','这台硅片搬运机器人以双目摄像头注视右侧开放式晶圆承载舱，两枚镜头朝向同一目标，画面聚焦在镜头与承载舱的对视关系上，表现被动观察的测距方式。'),
 ('激光雷达：主动发光测距','激光雷达不一样，它主动发光，靠光往返一趟的时间测距。一圈圈扫描下来，直接给出精确的三维点云。它不怕黑，但贵，也分不清颜色和纹理。','这台硅片搬运机器人在洁净室中缓缓转向，底盘的黑色激光雷达窗口正在扫描，周围空间中悬浮着由细密橙色光点组成的三维点云，点云自然贴合墙面、机台与地面轮廓，写实光影质感。'),
 ('多传感器融合','没有一种传感器是万能的。摄像头认得出物体，激光雷达量得准距离。把多种传感器对齐到同一个世界，才是真正的看见。','这台硅片搬运机器人在成排的白色工艺机台之间穿行，底盘雷达窗口与机身摄像头同时亮起，周围环境被一层极淡的暖色光晕覆盖，表现多源信息被整合成统一世界模型，画面克制不炫技。'),
 ('从像素到语义','认出画面里的东西，要靠一种叫神经网络的算法。它从海量照片里学会了认东西，把像素变成物体。这是门，那是台阶，前面有人。机器人要知道的不只是环境里有什么。还要判断能不能安全通行。要抓取的对象处在什么状态，能不能抓取。','这台硅片搬运机器人在一台工艺机台的上下料口前停下，顶部深灰色机械臂的夹爪悬停在对接位置前方，表现它正在分辨这是哪台机台和能不能对接的判断瞬间。'),
-('实时性与算力','感知要在几十毫秒内完成，慢一拍就可能撞上。传感器每秒都在产生海量数据，全靠机器人身上的计算模块处理。计算模块被功耗、散热和电池卡着，算力不可能随便堆。看得清和算得快之间，永远在取舍。','这台硅片搬运机器人在狭长洁净室走廊中快速行进，机械臂收拢在机身上方，背景机台有轻微运动模糊，而机器人本体与前方路径清晰锐利，表现感知系统在高速下仍然跟得上。'),
+('实时性与算力','感知要在几十毫秒内完成，慢一拍就可能撞上。传感器每秒都在产生海量数据，全靠机器人身上的计算模块处理。计算模块被功耗、散热和电池卡着，算力不可能随便堆。看得清和算得快之间，永远在取舍。','以 RK3588 嵌入式计算板为中心，摄像头、激光雷达、深度传感器图标从左侧输入，机械臂、网络和供电图标从右侧输出，表现边缘计算模块在功耗、散热与实时性之间的取舍；工程信息图风格，只有 RK3588 型号文字。'),
 ('失效与自知','强光、黑夜、遮挡、反光，都会让传感器失灵。好的系统不是从不出错，而是知道自己什么时候不可靠。','洁净室光刻区的强烈黄光下，这台硅片搬运机器人减速停住，光滑地面反射出大片眩光，传感器窗口亮度降低，青绿色状态灯带变为谨慎的暗色，表现感知不可靠时的自我保护。'),
 ('系统工程结论','所以看见不是一台相机的事。是传感器、算法、算力和安全策略的系统工程。感知越可靠，机器人的动作执行成功率才会越高，同样也越安全。','抽象化的硅片搬运机器人，静立于洁净室中央，机械臂自然收拢，周身被稀疏的橙色点云与微光环绕，点云沿着成排机台向远处延伸融入深蓝背景，表现看见是系统工程的结论，高级工程纪录片质感。'),
 ]
@@ -146,16 +146,6 @@ concat.append(f"file '{build/'intro.mp4'}"); t=INTRO_DURATION
 translation_index=0
 for i,(title,body,visual) in enumerate(sections,1):
     prefix=f'[{i}/{total_sections}] {title}'
-    audio=build/f'{i:02d}.mp3'
-    if reuse_audio and audio.exists():
-        print(f'{prefix}：复用已有配音…', flush=True)
-    else:
-        print(f'{prefix}：生成配音…', flush=True)
-        req=urllib.request.Request('https://api.siliconflow.cn/v1/audio/speech', data=json.dumps({'model':'FunAudioLLM/CosyVoice2-0.5B','voice':'FunAudioLLM/CosyVoice2-0.5B:alex','input':body,'response_format':'mp3','stream':False}).encode(), headers={'Authorization':'Bearer '+key,'Content-Type':'application/json'})
-        try:
-            with urllib.request.urlopen(req, timeout=120) as r: audio.write_bytes(r.read())
-        except Exception as e: raise SystemExit(f'硅基流动 TTS 失败（未输出密钥）：{e}')
-    dur=float(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','default=nw=1:nk=1',str(audio)]))
     color=['0x10233f','0x123b4a','0x26324d'][i%3]
     qwen_image=build/f'{i:02d}.png'
     image=(root/gpt_asset_dir/gpt_assets[i-1]) if image_provider == 'gpt' else qwen_image
@@ -172,10 +162,19 @@ for i,(title,body,visual) in enumerate(sections,1):
         raise SystemExit(f'缺少已有分镜图：{image}；请移除 USE_EXISTING_IMAGES=1 或先生成图片。')
     print(f'{prefix}：按短句渲染字幕片段…', flush=True)
     chunks=subtitle_chunks(body)
-    weights=[max(len(chunk), 8) for chunk in chunks]
     elapsed=0.0
-    for j, (chunk, weight) in enumerate(zip(chunks, weights), 1):
-        segment=dur*weight/sum(weights) if j < len(chunks) else dur-elapsed
+    for j, chunk in enumerate(chunks, 1):
+        audio=build/f'{i:02d}-{j:02d}.mp3'
+        if reuse_audio and audio.exists():
+            print(f'{prefix}：复用意群配音 {j}/{len(chunks)}…', flush=True)
+        else:
+            print(f'{prefix}：生成意群配音 {j}/{len(chunks)}…', flush=True)
+            req=urllib.request.Request('https://api.siliconflow.cn/v1/audio/speech', data=json.dumps({'model':'FunAudioLLM/CosyVoice2-0.5B','voice':'FunAudioLLM/CosyVoice2-0.5B:alex','input':chunk,'response_format':'mp3','stream':False}).encode(), headers={'Authorization':'Bearer '+key,'Content-Type':'application/json'})
+            try:
+                with urllib.request.urlopen(req, timeout=120) as r: audio.write_bytes(r.read())
+            except Exception as e: raise SystemExit(f'硅基流动 TTS 失败（未输出密钥）：{e}')
+        pause=0.18 if j < len(chunks) else 0.0
+        segment=float(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','default=nw=1:nk=1',str(audio)])) + pause
         if translation_index >= len(english_subtitles):
             raise SystemExit('英文字幕条目数量与中文意群不一致')
         english=english_subtitles[translation_index]; translation_index+=1
@@ -187,7 +186,8 @@ for i,(title,body,visual) in enumerate(sections,1):
         else:
             video_input=['-f','lavfi','-i',f'color=c={color}:s=1920x1080:r=30:d={segment}']
             filter_graph='[0:v][1:v]overlay=0:0,format=yuv420p[v]'
-        subprocess.run(['ffmpeg','-y','-v','error',*video_input,'-loop','1','-framerate','30','-i',str(subtitle),'-ss',str(elapsed),'-t',str(segment),'-i',str(audio),'-filter_complex',filter_graph,'-map','[v]','-map','2:a','-c:v','libx264','-t',str(segment),'-c:a','aac','-shortest',str(clip)],check=True)
+        filter_graph += f';[2:a]apad=pad_dur={pause}[a]'
+        subprocess.run(['ffmpeg','-y','-v','error',*video_input,'-loop','1','-framerate','30','-i',str(subtitle),'-t',str(segment),'-i',str(audio),'-filter_complex',filter_graph,'-map','[v]','-map','[a]','-c:v','libx264','-t',str(segment),'-c:a','aac','-shortest',str(clip)],check=True)
         concat.append(f"file '{clip}'")
         srt += [str(len(srt)//4+1),f'{stamp(t)} --> {stamp(t+segment)}',f'{screen_text(chunk)}\n{english.rstrip(".!?;:, ")}', '']
         t+=segment; elapsed+=segment
