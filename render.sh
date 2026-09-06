@@ -5,8 +5,9 @@ OUT="$ROOT/outputs"
 BUILD="$ROOT/work/build"
 OUTPUT_BASENAME="${OUTPUT_BASENAME:-机器人怎么看见世界}"
 IMAGE_PROVIDER="${IMAGE_PROVIDER:-gpt}"
+TTS_PROVIDER="${TTS_PROVIDER:-siliconflow}"
 mkdir -p "$OUT" "$BUILD"
-if [[ "${REUSE_AUDIO:-}" != "1" || ( "${GENERATE_IMAGES:-}" == "1" && "$IMAGE_PROVIDER" == "qwen" ) ]]; then
+if [[ "$TTS_PROVIDER" != "edge" && ( "${REUSE_AUDIO:-}" != "1" || ( "${GENERATE_IMAGES:-}" == "1" && "$IMAGE_PROVIDER" == "qwen" ) ) ]]; then
   : "${SILICONFLOW_API_KEY:?未检测到 SILICONFLOW_API_KEY。请仅在当前终端执行：export SILICONFLOW_API_KEY='你的密钥'}"
 fi
 if [[ "${GENERATE_IMAGES:-}" == "1" && "$IMAGE_PROVIDER" == "qwen" ]]; then
