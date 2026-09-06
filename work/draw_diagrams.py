@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
-"""绘制《机器人怎么"看见"世界？》的 3 张图形化分镜示意图（1920x1080，无文字）。"""
-import math
+"""产出《机器人怎么"看见"世界？》的 4 张分镜素材图（1920x1080，无文字）。
+
+02/03 为真实素材裁剪修补，05/06 为 Pillow 绘制/合成。幂等：直接覆盖输出。
+"""
 import random
 from pathlib import Path
 
@@ -46,23 +48,10 @@ def new_canvas():
 
 def finish(img, name):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    out = img.resize((W, H), Image.LANCZOS)
-    out.save(OUT_DIR / name)
+    if img.size != (W, H):
+        img = img.resize((W, H), Image.LANCZOS)
+    img.save(OUT_DIR / name)
     print(f'已输出 {OUT_DIR / name}')
-
-
-def dash_line(d, p0, p1, color, width, dash=14, gap=10):
-    x0, y0, x1, y1 = p0[0], p0[1], p1[0], p1[1]
-    length = math.hypot(x1 - x0, y1 - y0)
-    if length == 0:
-        return
-    ux, uy = (x1 - x0) / length, (y1 - y0) / length
-    pos = 0.0
-    while pos < length:
-        end = min(pos + dash, length)
-        d.line([P((x0 + ux * pos, y0 + uy * pos)), P((x0 + ux * end, y0 + uy * end))],
-               fill=color, width=S(width))
-        pos += dash + gap
 
 
 def cubic_points(p0, p1, p2, p3, n=60):
@@ -90,63 +79,64 @@ def draw_lens(d, cx, cy, r):
               fill=(220, 235, 245, 90))
 
 
-def iso_cube(d, cx, cy, size, color, width, fill=None):
-    """等距线框立方体，cx/cy 为前表面中心。"""
-    hw = size / 2
-    dx, dy = size * 0.42, -size * 0.32
-    front = [(cx - hw, cy - hw), (cx + hw, cy - hw), (cx + hw, cy + hw), (cx - hw, cy + hw)]
-    back = [(x + dx, y + dy) for x, y in front]
-    if fill:
-        d.polygon([P(p) for p in front], fill=fill)
-    for quad in (front, back):
-        d.line([P(p) for p in quad + [quad[0]]], fill=color, width=S(width), joint='curve')
-    for a, b in zip(front, back):
-        d.line([P(a), P(b)], fill=color, width=S(width))
+def draw_02_camera():
+    """传感器特写：优艾智合4.png 中部干净区域（黑色内凹传感器窗口 + 青绿灯带）。"""
+    src = Image.open(ROOT / 'assets' / '优艾智合4.png').convert('RGB')
+    crop = src.crop((370, 470, 1470, 1089))  # 1100x619，16:9，无水印无文字叠加
+    out = crop.resize((W, H), Image.LANCZOS)
+    out = out.filter(ImageFilter.UnsharpMask(radius=2, percent=60, threshold=2))
+    finish(out, '02-摄像头.png')
 
 
-def draw_03_stereo():
-    img, d = new_canvas()
-    lens_l, lens_r = (620, 240), (1300, 240)
-    target = (960, 800)
-    plane_y = 400
-    plane_half = 150
-
-    # 基线（两镜头之间的虚线）
-    dash_line(d, (lens_l[0] + 105, lens_l[1]), (lens_r[0] - 105, lens_r[1]),
-              TEAL + (120,), 3, dash=10, gap=12)
-
-    # 视线：每个镜头向目标立方体张开的两条边线 + 一条中心视线
-    cube_hw = 62
-    for lens in (lens_l, lens_r):
-        for edge in ((target[0] - cube_hw, target[1] - cube_hw * 0.6),
-                     (target[0] + cube_hw, target[1] + cube_hw * 0.6)):
-            d.line([P(lens), P(edge)], fill=LINE_DIM + (110,), width=S(2))
-        d.line([P(lens), P(target)], fill=LINE + (200,), width=S(3))
-
-    # 成像面线段 + 中心刻度 + 投影点（左右投影位置不同 = 视差）
-    for lens in (lens_l, lens_r):
-        cx = lens[0]
-        d.line([P((cx - plane_half, plane_y)), P((cx + plane_half, plane_y))],
-               fill=LINE + (230,), width=S(4))
-        for sx in (-plane_half, plane_half):
-            d.line([P((cx + sx, plane_y - 9)), P((cx + sx, plane_y + 9))],
-                   fill=LINE + (230,), width=S(3))
-        d.line([P((cx, plane_y - 12)), P((cx, plane_y + 12))], fill=TEAL + (255,), width=S(3))
-        t = (plane_y - lens[1]) / (target[1] - lens[1])
-        px = lens[0] + (target[0] - lens[0]) * t
-        dash_line(d, (cx, plane_y), (px, plane_y), ORANGE + (220,), 5, dash=12, gap=8)
-        d.ellipse([S(px - 10), S(plane_y - 10), S(px + 10), S(plane_y + 10)],
-                  fill=ORANGE + (255,))
-
-    for lens in (lens_l, lens_r):
-        draw_lens(d, lens[0], lens[1], 92)
-
-    # 目标：等距线框立方体（晶圆盒轮廓感）
-    iso_cube(d, target[0], target[1], 124, ORANGE + (255,), 4, fill=(245, 160, 76, 26))
-    d.ellipse([S(target[0] - 7), S(target[1] - 7), S(target[0] + 7), S(target[1] + 7)],
-              fill=(255, 220, 180, 255))
-
-    finish(img, '03-双目深度.png')
+def draw_03_obstacle():
+    """双目/避障分镜：优艾智合-避障演示.png，机器人与红色交通锥的对视构图。"""
+    src = Image.open(ROOT / 'assets' / '优艾智合-避障演示.png').convert('RGB')
+    # 左下 CE & SEMI 说明条，分两段重建：
+    # 1) 地板部分（x 60-1080）：采样左侧干净列 x=30 逐行铺开
+    floor = src.crop((30, 1420, 31, 1800)).resize((1020, 380))
+    floor = floor.filter(ImageFilter.GaussianBlur(6))
+    floor_mask = Image.new('L', floor.size, 0)
+    ImageDraw.Draw(floor_mask).rectangle([0, 0, floor.width - 1, floor.height - 1], fill=255)
+    floor_mask = floor_mask.filter(ImageFilter.GaussianBlur(30))
+    src.paste(floor, (60, 1420), floor_mask)
+    # 2) 底盘侧面 + 黑色防撞条（x 1080-1640）：防撞条是斜带，
+    #    取右侧干净列 x=1670 按斜率逐列平移复制（剪切重建）
+    slope = (1680 - 1420) / (1750 - 1060)  # 防撞条上沿斜率 ≈ 0.377
+    col = Image.new('RGB', (1, 1000))
+    col.paste(src.crop((1670, 1100, 1671, 1910)), (0, 0))
+    col.paste(src.crop((1670, 1909, 1671, 1910)).resize((1, 90)), (0, 810))  # 底部地板行复制延展
+    patch = Image.new('RGB', (560, 400))
+    for i in range(560):
+        shift = round(slope * (1080 + i - 1670))
+        patch.paste(col, (i, shift - 280))  # patch 行 r ↔ 原图行 1380 + r - shift
+    patch = patch.filter(ImageFilter.GaussianBlur(2))
+    patch_mask = Image.new('L', patch.size, 0)
+    ImageDraw.Draw(patch_mask).rectangle([0, 0, patch.width - 1, patch.height - 1], fill=255)
+    patch_mask = patch_mask.filter(ImageFilter.GaussianBlur(25))
+    src.paste(patch, (1080, 1380), patch_mask)
+    # 机身丝印与警示贴纸
+    for box, radius in [
+        ((1155, 510, 1260, 605), 26),    # Y001 丝印
+        ((1285, 330, 1340, 435), 20),    # 竖排警示贴纸（底部进入裁剪区）
+        ((1095, 595, 1135, 655), 18),    # 警示贴纸
+        ((1335, 800, 1430, 885), 20),
+        ((1075, 1100, 1170, 1165), 18),
+        ((1520, 1010, 1620, 1095), 20),  # 禁止手入警示贴纸
+        ((1610, 1240, 1715, 1350), 20),  # 黄色三角警示贴纸
+        ((2075, 915, 2205, 950), 16),    # 导轨小标签
+    ]:
+        soft_patch(src, box, radius)
+    # 黑色标签屏：模糊会混入周围白色发灰，直接用深色填充模拟原屏幕
+    screen = Image.new('RGB', (50, 95), (32, 35, 42))
+    screen_mask = Image.new('L', screen.size, 0)
+    ImageDraw.Draw(screen_mask).rectangle([0, 0, 49, 94], fill=255)
+    screen_mask = screen_mask.filter(ImageFilter.GaussianBlur(10))
+    src.paste(screen, (1505, 1215), screen_mask)
+    # 16:9 裁剪：上方避开 YOUIBOT 水印与右上型号条，右侧留全交通锥
+    crop = src.crop((324, 380, 3044, 1910))  # 2720x1530，0.71 倍缩小不损失锐度
+    out = crop.resize((W, H), Image.LANCZOS)
+    out = out.filter(ImageFilter.UnsharpMask(radius=2, percent=60, threshold=2))
+    finish(out, '03-双目深度.png')
 
 
 def draw_05_fusion():
@@ -296,6 +286,7 @@ def draw_06_semantics():
 
 
 if __name__ == '__main__':
-    draw_03_stereo()
+    draw_02_camera()
+    draw_03_obstacle()
     draw_05_fusion()
     draw_06_semantics()
