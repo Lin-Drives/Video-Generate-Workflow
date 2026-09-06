@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
-import json, os, re, subprocess, sys, urllib.request
+import os, re, subprocess, sys
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 root, build = map(Path, sys.argv[1:]); out=root/'outputs'; build.mkdir(parents=True, exist_ok=True)
 INTRO_DURATION=3.5; OUTRO_DURATION=5.0
-TTS_PROVIDER=os.environ.get('TTS_PROVIDER', 'siliconflow')
-TTS_MODEL=os.environ.get('TTS_MODEL', 'FunAudioLLM/CosyVoice2-0.5B')
-TTS_VOICE=os.environ.get('TTS_VOICE', 'zh-CN-YunyangNeural' if TTS_PROVIDER == 'edge' else 'FunAudioLLM/CosyVoice2-0.5B:alex')
+TTS_VOICE=os.environ.get('TTS_VOICE', 'zh-CN-YunyangNeural')
 EDGE_TTS_PYTHONPATH=os.environ.get('EDGE_TTS_PYTHONPATH', '/private/tmp/edge-tts-runtime')
 EDGE_TTS_RATE=os.environ.get('EDGE_TTS_RATE', '-5%')
 sections=[
@@ -20,7 +18,7 @@ sections=[
 ('失效与自知','强光、黑夜、遮挡、反光，都会让传感器失灵。好的系统不是从不出错，而是知道自己什么时候不可靠。','洁净室光刻区的强烈黄光下，这台硅片搬运机器人减速停住，光滑地面反射出大片眩光，传感器窗口亮度降低，青绿色状态灯带变为谨慎的暗色，表现感知不可靠时的自我保护。'),
 ('系统工程结论','所以看见不是一台相机的事。是传感器、算法、算力和安全策略的系统工程。感知越可靠，机器人的动作执行成功率才会越高，同样也越安全。','抽象化的硅片搬运机器人，静立于洁净室中央，机械臂自然收拢，周身被稀疏的橙色点云与微光环绕，点云沿着成排机台向远处延伸融入深蓝背景，表现看见是系统工程的结论，高级工程纪录片质感。'),
 ]
-key=os.environ.get('SILICONFLOW_API_KEY'); image_provider=os.environ.get('IMAGE_PROVIDER','gpt'); generate_images=os.environ.get('GENERATE_IMAGES') == '1'; reuse_audio=os.environ.get('REUSE_AUDIO') == '1'; use_existing_images=os.environ.get('USE_EXISTING_IMAGES') == '1'; image_scenes={int(x) for x in os.environ.get('IMAGE_SCENES','').split(',') if x.strip()}; srt=[]; concat=[]; t=0.0
+generate_images=os.environ.get('GENERATE_IMAGES') == '1'; reuse_audio=os.environ.get('REUSE_AUDIO') == '1'; use_existing_images=os.environ.get('USE_EXISTING_IMAGES') == '1'; srt=[]; concat=[]; t=0.0
 gpt_assets=[
     '01-开场定位.png', '02-摄像头.png', '03-双目深度.png',
     '04-激光雷达.png', '05-多传感器融合.png', '06-像素到语义.png',
@@ -30,8 +28,8 @@ gpt_asset_dir='assets/ow12'
 image_style='电影级半导体洁净室工程纪录片，写实工程可视化，洁净室的浅色环境与深蓝色氛围光形成对比，克制的橙色传感器高光，构图干净。'
 negative_prompt='任何文字、汉字、英文字母、数字、标签、标题、字幕、水印、标志、界面、信息图、图表、示意图、比例文字。'
 total_sections=len(sections)
-if generate_images and image_provider != 'qwen':
-    raise SystemExit('当前主配置为 GPT 生图：请先通过 GPT 图像工作流生成并审核分镜，再用 USE_EXISTING_IMAGES=1 渲染。Qwen 仅作为备选：IMAGE_PROVIDER=qwen GENERATE_IMAGES=1 ./render.sh')
+if generate_images:
+    raise SystemExit('请先通过 GPT 图像工作流生成并审核分镜，再用 USE_EXISTING_IMAGES=1 渲染。')
 english_subtitles=[
     'Before a robot enters the real world to work, it must first answer: where am I',
     'Seeing the world is the starting point of every action',
@@ -108,7 +106,7 @@ def screen_text(text):
     return text.rstrip('，。！？； ')
 
 def tts_text(text):
-    """CosyVoice treats Chinese enumeration commas too abruptly; use spoken pauses only."""
+    """Use natural spoken pauses for Chinese enumerations."""
     return text.replace('、', '，')
 
 def subtitle_image(chinese, english, path):
@@ -151,7 +149,7 @@ def title_card(chinese, english, path, cta=None):
     canvas.save(path)
 
 def render_title_clip(background, overlay, clip, duration):
-    # Match the CosyVoice clips exactly; concat demuxing cannot safely mix AAC formats.
+    # Use mono AAC throughout; concat demuxing cannot safely mix AAC formats.
     subprocess.run(['ffmpeg','-y','-v','error','-loop','1','-framerate','30','-i',str(background),'-loop','1','-framerate','30','-i',str(overlay),'-f','lavfi','-i','anullsrc=channel_layout=mono:sample_rate=24000','-filter_complex',f'[0:v]scale=2020:1136,crop=1920:1080,fade=t=in:st=0:d=0.45,fade=t=out:st={duration-0.45}:d=0.45[base];[base][1:v]overlay=0:0,format=yuv420p[v]','-map','[v]','-map','2:a','-t',str(duration),'-c:v','libx264','-c:a','aac','-ar','24000','-ac','1','-shortest',str(clip)],check=True)
 
 intro_overlay=build/'intro-title.png'; outro_overlay=build/'outro-title.png'
@@ -164,18 +162,8 @@ translation_index=0
 for i,(title,body,visual) in enumerate(sections,1):
     prefix=f'[{i}/{total_sections}] {title}'
     color=['0x10233f','0x123b4a','0x26324d'][i%3]
-    qwen_image=build/f'{i:02d}.png'
-    image=(root/gpt_asset_dir/gpt_assets[i-1]) if image_provider == 'gpt' else qwen_image
-    should_generate_image=generate_images and (not image_scenes or i in image_scenes)
-    if should_generate_image:
-        print(f'{prefix}：生成备选 Qwen-Image 分镜图…', flush=True)
-        prompt=f'{image_style}. {visual}'
-        image_req=urllib.request.Request('https://api.siliconflow.cn/v1/images/generations', data=json.dumps({'model':'Qwen/Qwen-Image','prompt':prompt,'negative_prompt':negative_prompt,'image_size':'1664x928','num_inference_steps':20,'cfg':4.0}).encode(), headers={'Authorization':'Bearer '+key,'Content-Type':'application/json'})
-        try:
-            with urllib.request.urlopen(image_req, timeout=180) as r: image_url=json.load(r)['images'][0]['url']
-            with urllib.request.urlopen(image_url, timeout=180) as r: qwen_image.write_bytes(r.read())
-        except Exception as e: raise SystemExit(f'硅基流动 Qwen-Image 失败（未输出密钥）：{e}')
-    elif use_existing_images and not image.exists():
+    image=root/gpt_asset_dir/gpt_assets[i-1]
+    if use_existing_images and not image.exists():
         raise SystemExit(f'缺少已有分镜图：{image}；请移除 USE_EXISTING_IMAGES=1 或先生成图片。')
     print(f'{prefix}：按短句渲染字幕片段…', flush=True)
     chunks=subtitle_chunks(body)
@@ -186,19 +174,11 @@ for i,(title,body,visual) in enumerate(sections,1):
             print(f'{prefix}：复用意群配音 {j}/{len(chunks)}…', flush=True)
         else:
             print(f'{prefix}：生成意群配音 {j}/{len(chunks)}…', flush=True)
-            if TTS_PROVIDER == 'edge':
-                edge_env={**os.environ, 'PYTHONPATH': EDGE_TTS_PYTHONPATH}
-                try:
-                    subprocess.run([sys.executable, '-m', 'edge_tts', '--voice', TTS_VOICE, f'--rate={EDGE_TTS_RATE}', '--text', tts_text(chunk), '--write-media', str(audio)], check=True, env=edge_env)
-                except subprocess.CalledProcessError as e:
-                    raise SystemExit(f'Edge TTS 失败：{e}')
-            elif TTS_PROVIDER == 'siliconflow':
-                req=urllib.request.Request('https://api.siliconflow.cn/v1/audio/speech', data=json.dumps({'model':TTS_MODEL,'voice':TTS_VOICE,'input':tts_text(chunk),'response_format':'mp3','stream':False}).encode(), headers={'Authorization':'Bearer '+key,'Content-Type':'application/json'})
-                try:
-                    with urllib.request.urlopen(req, timeout=120) as r: audio.write_bytes(r.read())
-                except Exception as e: raise SystemExit(f'硅基流动 TTS 失败（未输出密钥）：{e}')
-            else:
-                raise SystemExit(f'不支持的 TTS_PROVIDER：{TTS_PROVIDER}')
+            edge_env={**os.environ, 'PYTHONPATH': EDGE_TTS_PYTHONPATH}
+            try:
+                subprocess.run([sys.executable, '-m', 'edge_tts', '--voice', TTS_VOICE, f'--rate={EDGE_TTS_RATE}', '--text', tts_text(chunk), '--write-media', str(audio)], check=True, env=edge_env)
+            except subprocess.CalledProcessError as e:
+                raise SystemExit(f'Edge TTS 失败：{e}')
         pause=0.18 if j < len(chunks) else 0.0
         segment=float(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','default=nw=1:nk=1',str(audio)])) + pause
         if translation_index >= len(english_subtitles):
@@ -206,7 +186,7 @@ for i,(title,body,visual) in enumerate(sections,1):
         english=english_subtitles[translation_index]; translation_index+=1
         subtitle=build/f'{i:02d}-{j:02d}-subtitle.png'; subtitle_image(chunk,english,subtitle)
         clip=build/f'{i:02d}-{j:02d}.mp4'
-        if (generate_images or use_existing_images) and image.exists():
+        if use_existing_images and image.exists():
             video_input=['-loop','1','-framerate','30','-i',str(image)]
             filter_graph='[0:v]scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080[base];[base][1:v]overlay=0:0,format=yuv420p[v]'
         else:
@@ -221,7 +201,7 @@ for i,(title,body,visual) in enumerate(sections,1):
 concat.append(f"file '{build/'outro.mp4'}")
 if translation_index != len(english_subtitles): raise SystemExit('英文字幕存在未使用条目')
 (build/'concat.txt').write_text('\n'.join(concat)+'\n'); (build/'subtitles.srt').write_text('\n'.join(srt), encoding='utf-8')
-prompt_doc=['# GPT 图像工作流分镜提示词：机器人怎么"看见"世界？', '', '主配置：GPT 图像工作流；Qwen 仅作备选。', '素材来源：assets/优艾智合1.png 至 assets/优艾智合4.png，以及 assets/ow12-300-无托盘-角色参考.png（无硅片托盘主参考），即优艾智合（YOUIBOT）OW12-300 十二寸晶圆搬运移动操作机器人的官方素材。外观要点：下层为扁平、长方形的白色移动底盘，四角和侧面有细绿色状态灯带、黑色防撞边与前部黑色传感器窗口；上层是白色箱体，中部为倾斜控制面板，右侧是无托盘时可见的开放式方形晶圆承载舱、底部导轨和悬臂平台；顶部通过短立柱连接深灰色六轴协作机械臂，末端为银色金属夹爪。生图时严格以无托盘主参考为准：不得画成立式柜体、单一梯形底盘、透明晶圆盒陈列柜或黑色 FOUP。', '动态镜头准入：本片为轮式底盘，无步态问题，但行进镜头必须人工检查上下双层底盘的比例与透视、轮子与地面的接触关系、机械臂与顶部立柱的连接位置、右侧开放式承载舱和导轨结构是否合理；含点云、光锥等可视化元素时，必须保持其像物理光影而非屏幕图形，避免落入示意图风格。', f'统一风格：{image_style}', f'负面提示词：{negative_prompt}', '']
+prompt_doc=['# GPT 图像工作流分镜提示词：机器人怎么"看见"世界？', '', '主配置：GPT 图像工作流。', '素材来源：assets/优艾智合1.png 至 assets/优艾智合4.png，以及 assets/ow12-300-无托盘-角色参考.png（无硅片托盘主参考），即优艾智合（YOUIBOT）OW12-300 十二寸晶圆搬运移动操作机器人的官方素材。外观要点：下层为扁平、长方形的白色移动底盘，四角和侧面有细绿色状态灯带、黑色防撞边与前部黑色传感器窗口；上层是白色箱体，中部为倾斜控制面板，右侧是无托盘时可见的开放式方形晶圆承载舱、底部导轨和悬臂平台；顶部通过短立柱连接深灰色六轴协作机械臂，末端为银色金属夹爪。生图时严格以无托盘主参考为准：不得画成立式柜体、单一梯形底盘、透明晶圆盒陈列柜或黑色 FOUP。', '动态镜头准入：本片为轮式底盘，无步态问题，但行进镜头必须人工检查上下双层底盘的比例与透视、轮子与地面的接触关系、机械臂与顶部立柱的连接位置、右侧开放式承载舱和导轨结构是否合理；含点云、光锥等可视化元素时，必须保持其像物理光影而非屏幕图形，避免落入示意图风格。', f'统一风格：{image_style}', f'负面提示词：{negative_prompt}', '']
 for i,(title,_,visual) in enumerate(sections,1): prompt_doc += [f'## {i:02d} {title}', visual, '']
 (out/'分镜提示词-感知与视觉.md').write_text('\n'.join(prompt_doc), encoding='utf-8')
 print(f'全部 {total_sections} 个分镜完成，累计时长 {t:.1f}s。', flush=True)
