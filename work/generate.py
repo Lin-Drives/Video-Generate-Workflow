@@ -6,7 +6,7 @@ root, build = map(Path, sys.argv[1:]); out=root/'outputs'; build.mkdir(parents=T
 INTRO_DURATION=3.5; OUTRO_DURATION=5.0
 sections=[
 ('开场：先回答我在哪','机器人冲刺之前，先要回答一个问题，我在哪。看见世界，是所有动作的起点。','空旷的半导体洁净室走廊内，这台白色硅片搬运机器人静立，底盘黑色传感器窗口透出微弱橙色光，车身侧面青绿色状态灯带亮起，表现启动前的观察与定位瞬间。'),
-('摄像头：主感官','摄像头便宜、信息量大，是机器人的主感官。但照片是平的，近处的人和远处的墙，看起来只是大小不同。距离不会写在像素里，要靠算法算出来。','这台硅片搬运机器人机身上视觉传感器的极近景特写：黑色内凹传感器窗口与机械臂腕部相机嵌在白色机身和深灰色手臂中，镜头镀膜反射出洁净室的灯光，突出眼睛的精密感。'),
+('摄像头：主感官','摄像头便宜、信息量大，是机器人的主感官。但照片是平的，近处的人和远处的墙，看起来只是大小不同。照片里只有颜色和亮度，距离要靠算法推出来。','这台硅片搬运机器人机身上视觉传感器的极近景特写：黑色内凹传感器窗口与机械臂腕部相机嵌在白色机身和深灰色手臂中，镜头镀膜反射出洁净室的灯光，突出眼睛的精密感。'),
 ('双目：像人眼一样测距','两个摄像头像人的双眼，靠两张照片的视差估算深度。但它怕暗、怕白墙，表面没有纹理，就算不出深度。','这台硅片搬运机器人以双目摄像头注视右侧开放式晶圆承载舱，两枚镜头朝向同一目标，画面聚焦在镜头与承载舱的对视关系上，表现被动观察的测距方式。'),
 ('激光雷达：主动发光测距','激光雷达不一样，它主动发光，靠光往返一趟的时间测距。一圈圈扫描下来，直接给出精确的三维点云。它不怕黑，但贵，也分不清颜色和纹理。','这台硅片搬运机器人在洁净室中缓缓转向，底盘的黑色激光雷达窗口正在扫描，周围空间中悬浮着由细密橙色光点组成的三维点云，点云自然贴合墙面、机台与地面轮廓，写实光影质感。'),
 ('多传感器融合','没有一种传感器是万能的。摄像头认得出物体，激光雷达量得准距离。把多种传感器对齐到同一个世界，才是真正的看见。','这台硅片搬运机器人在成排的白色工艺机台之间穿行，底盘雷达窗口与机身摄像头同时亮起，周围环境被一层极淡的暖色光晕覆盖，表现多源信息被整合成统一世界模型，画面克制不炫技。'),
@@ -32,7 +32,7 @@ english_subtitles=[
     'Seeing the world is the starting point of every action',
     'Cameras are cheap and information-rich: the robot\'s primary sense',
     'But a photo is flat: a person nearby and a far wall just differ in size',
-    'Distance is not written in pixels; algorithms must compute it',
+    'A photo only records color and brightness; distance must be computed',
     'Two cameras work like human eyes, estimating depth from disparity',
     'But it struggles in the dark and on blank walls: no texture, no depth',
     'LiDAR is different: it emits light and times each round trip to measure distance',
