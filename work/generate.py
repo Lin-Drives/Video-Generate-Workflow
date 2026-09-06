@@ -4,6 +4,10 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 root, build = map(Path, sys.argv[1:]); out=root/'outputs'; build.mkdir(parents=True, exist_ok=True)
 INTRO_DURATION=3.5; OUTRO_DURATION=5.0
+# MOSS is better suited to expressive, long-form narration than the previous
+# lightweight CosyVoice default. Both can still be overridden per render.
+TTS_MODEL=os.environ.get('TTS_MODEL', 'fnlp/MOSS-TTSD-v0.5')
+TTS_VOICE=os.environ.get('TTS_VOICE', 'fnlp/MOSS-TTSD-v0.5:charles')
 sections=[
 ('开场：先回答我在哪','机器人进入真实世界开始工作之前，先要回答一个问题，我在哪？看见世界，是所有动作的起点。','空旷的半导体洁净室走廊内，这台白色硅片搬运机器人静立，底盘黑色传感器窗口透出微弱橙色光，车身侧面青绿色状态灯带亮起，表现启动前的观察与定位瞬间。'),
 ('摄像头：主感官','摄像头便宜、信息量大，是机器人的主感官。但照片是平的，近处的人和远处的墙，看起来只是大小不同。照片里只有颜色和亮度，距离要靠算法推出来。','工程图：左侧清晰相机镜头向右投影，右侧同一张平面图像中以大号人形和小号墙体图标表示近/远物体只呈现为大小差异；无深度刻度、无文字。'),
@@ -173,7 +177,7 @@ for i,(title,body,visual) in enumerate(sections,1):
             print(f'{prefix}：复用意群配音 {j}/{len(chunks)}…', flush=True)
         else:
             print(f'{prefix}：生成意群配音 {j}/{len(chunks)}…', flush=True)
-            req=urllib.request.Request('https://api.siliconflow.cn/v1/audio/speech', data=json.dumps({'model':'FunAudioLLM/CosyVoice2-0.5B','voice':'FunAudioLLM/CosyVoice2-0.5B:alex','input':tts_text(chunk),'response_format':'mp3','stream':False}).encode(), headers={'Authorization':'Bearer '+key,'Content-Type':'application/json'})
+            req=urllib.request.Request('https://api.siliconflow.cn/v1/audio/speech', data=json.dumps({'model':TTS_MODEL,'voice':TTS_VOICE,'input':tts_text(chunk),'response_format':'mp3','stream':False}).encode(), headers={'Authorization':'Bearer '+key,'Content-Type':'application/json'})
             try:
                 with urllib.request.urlopen(req, timeout=120) as r: audio.write_bytes(r.read())
             except Exception as e: raise SystemExit(f'硅基流动 TTS 失败（未输出密钥）：{e}')
