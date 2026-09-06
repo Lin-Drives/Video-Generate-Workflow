@@ -4,10 +4,10 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 root, build = map(Path, sys.argv[1:]); out=root/'outputs'; build.mkdir(parents=True, exist_ok=True)
 INTRO_DURATION=3.5; OUTRO_DURATION=5.0
-# MOSS is better suited to expressive, long-form narration than the previous
-# lightweight CosyVoice default. Both can still be overridden per render.
-TTS_MODEL=os.environ.get('TTS_MODEL', 'fnlp/MOSS-TTSD-v0.5')
-TTS_VOICE=os.environ.get('TTS_VOICE', 'fnlp/MOSS-TTSD-v0.5:charles')
+# Keep the established engineering-narration voice; either value can still be
+# overridden for an intentional future voice test.
+TTS_MODEL=os.environ.get('TTS_MODEL', 'FunAudioLLM/CosyVoice2-0.5B')
+TTS_VOICE=os.environ.get('TTS_VOICE', 'FunAudioLLM/CosyVoice2-0.5B:alex')
 sections=[
 ('开场：先回答我在哪','机器人进入真实世界开始工作之前，先要回答一个问题，我在哪？看见世界，是所有动作的起点。','空旷的半导体洁净室走廊内，这台白色硅片搬运机器人静立，底盘黑色传感器窗口透出微弱橙色光，车身侧面青绿色状态灯带亮起，表现启动前的观察与定位瞬间。'),
 ('摄像头：主感官','摄像头便宜、信息量大，是机器人的主感官。但照片是平的，近处的人和远处的墙，看起来只是大小不同。照片里只有颜色和亮度，距离要靠算法推出来。','工程图：左侧清晰相机镜头向右投影，右侧同一张平面图像中以大号人形和小号墙体图标表示近/远物体只呈现为大小差异；无深度刻度、无文字。'),
